@@ -72,17 +72,12 @@ See the [supported sites documentation](https://www.phoenixthrush.com/AniWorld-D
 | SerienStream | Series | Stream URLs resolved | Both dub presets resolved VOE; CAPTCHA handling can block access |
 | MegaKino | Movies and series | Stream URLs resolved | Sampled title's VOE link passed; a separate MegaKino hoster sample also passed |
 | Filmo | Movies | Stream URLs resolved | VOE samples passed |
-| Moflix | Movies and series | Stream URLs resolved | MoflixClick and Vidara samples passed; verification can block title discovery |
 | MangaFire | Manga | Chapter/page URLs resolved | Two sample titles; archive creation and image downloads were not tested |
 | FilmPalast | Movies | Stream URL resolved | VOE sample passed; some requests returned no extractable source |
-| Hanime | Adult animation | Stream URL resolved | Trending feed can return HTTP 403 or require a CAPTCHA |
-| HentaiTV | Adult animation | Stream and poster URLs resolved | Optional Web UI tab; disabled by default |
-| AnimeIDHentai | Adult animation | Stream and poster URLs resolved; content unverified | Returned stream filename differed from the selected title; CLI/Python only |
-| HentaiHaven | Adult animation | Stream and poster URLs resolved | Optional Web UI tab; disabled by default |
 | Kinox | Movies and series | Blocked by verification CAPTCHA | Disabled by default |
 | BurningSeries | Series | Stream mirrors returned VPN warning pages | No usable mirror for the sample; stopped at the first blocked hoster |
 
-"Disabled by default" refers to Web UI visibility; direct CLI URLs remain accepted. Hanime (`hanime.tv`), HentaiTV (`hentai.tv`) and HentaiHaven (`hentaihaven.xxx`) have optional Web UI tabs, enabled with `ANIWORLD_ENABLE_HTV=1`, `ANIWORLD_ENABLE_HENTAITV=1` and `ANIWORLD_ENABLE_HENTAIHAVEN=1`. AnimeIDHentai (`animeidhentai.com`) supports direct CLI URLs and Python use. See [adult-site usage](https://www.phoenixthrush.com/AniWorld-Downloader-Docs/usage#adult-site-backends) for examples.
+"Disabled by default" refers to Web UI visibility; direct CLI URLs remain accepted.
 
 ### Stream Hosters
 

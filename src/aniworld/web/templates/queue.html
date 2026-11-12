@@ -57,9 +57,10 @@
 {# Only reachable from a queue row, so it lives with the queue rather than on
 every page in base.html. #}
 <div class="overlay" id="captchaOverlay" data-close-on-backdrop>
-  <div class="modal modal-narrow">
-    <button class="modal-close" data-close-modal aria-label="Close">&times;</button>
-    <h2 class="modal-title" data-i18n="captcha.title">Solve captcha</h2>
+  <div class="modal modal-narrow" role="dialog" aria-modal="true" aria-labelledby="captchaModalTitle">
+    <button class="modal-close" data-close-modal aria-label="Close"
+      data-i18n-aria-label="common.close">&times;</button>
+    <h2 class="modal-title" id="captchaModalTitle" data-i18n="captcha.title">Solve captcha</h2>
     <p class="captcha-hint" data-i18n="captcha.hint">Click the image to interact with the browser.</p>
     <div class="captcha-screen-wrap">
       <img id="captchaScreenshot" class="captcha-screen" alt="Captcha browser" draggable="false" />
@@ -69,5 +70,5 @@ every page in base.html. #}
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='queue.js') }}?v={{ app_version }}"></script>
+<script src="{{ url_for('static', filename='queue.js') }}?v={{ static_version }}"></script>
 {% endblock %}

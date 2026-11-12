@@ -18,11 +18,10 @@ from ..config import (
 )
 from ..logger import get_logger
 from . import paths, schedule
-from .media import SITE_KEYS, SITE_LABELS, SITES_OFF_BY_DEFAULT, WORKING_PROVIDERS
+from .media import SITE_KEYS, SITE_LABELS, WORKING_PROVIDERS
 
 logger = get_logger(__name__)
 
-UI_LANGUAGES = ("en", "de")
 OUTPUT_FORMATS = ("mkv", "mp4")
 
 # How Auto-Sync decides when to run: every so often, or at fixed times
@@ -31,7 +30,6 @@ DEFAULT_AUTOSYNC_INTERVAL_SECONDS = 24 * 60 * 60
 DEFAULT_AUTOSYNC_CRON = "0 3 * * *"
 
 DISCORD_MODES = ("standard", "advanced")
-DISCORD_LANGUAGES = ("en", "de")
 
 # Sent instead of the real token so it never leaves the server.
 SECRET_PLACEHOLDER = "•" * 8
@@ -43,7 +41,6 @@ DISCORD_KEYS = {
     "mode": "ANIWORLD_DISCORD_MODE",
     "request_role_id": "ANIWORLD_DISCORD_REQUEST_ROLE_ID",
     "guild_id": "ANIWORLD_DISCORD_GUILD_ID",
-    "language": "ANIWORLD_DISCORD_LANGUAGE",
     "announce_channel_id": "ANIWORLD_DISCORD_ANNOUNCE_CHANNEL_ID",
 }
 
@@ -59,11 +56,6 @@ class SettingsError(ValueError):
 
 def _flag(key, default="0"):
     return os.environ.get(key, default) == "1"
-
-
-def ui_language():
-    lang = os.environ.get("ANIWORLD_UI_LANGUAGE", "en").lower()
-    return lang if lang in UI_LANGUAGES else "en"
 
 
 def library_enabled():
@@ -132,7 +124,7 @@ def autosync_cron_schedule():
 
 def autosync_schedule_description(language=None):
     """One line for the UI: "Every day at 22:00", "Every 6 hours"."""
-    language = language or ui_language()
+    language = language or "en"
     fixed = autosync_cron_schedule()
     if fixed is not None:
         return fixed.describe(language)
@@ -153,26 +145,12 @@ def site_env_key(site):
 def site_enabled(site):
     if site not in SITE_KEYS:
         return False
-    return _flag(site_env_key(site), "0" if site in SITES_OFF_BY_DEFAULT else "1")
+    return _flag(site_env_key(site), "1")
 
 
 def enabled_sites():
     """{site key: on or off} for every site there is."""
     return {site: site_enabled(site) for site in SITE_KEYS}
-
-
-def htv_enabled():
-    return site_enabled("htv")
-
-
-def burningseries_enabled():
-    """Off by default: the site is geo-blocked and behind Google reCAPTCHA."""
-    return site_enabled("burningseries")
-
-
-def kinox_enabled():
-    """Off by default: every download needs a captcha solved by hand."""
-    return site_enabled("kinox")
 
 
 def english_sub_disabled():
@@ -319,7 +297,6 @@ def discord_settings():
         "mode": os.environ.get(DISCORD_KEYS["mode"], "standard"),
         "request_role_id": os.environ.get(DISCORD_KEYS["request_role_id"], ""),
         "guild_id": os.environ.get(DISCORD_KEYS["guild_id"], ""),
-        "language": os.environ.get(DISCORD_KEYS["language"], "en"),
         "announce_channel_id": os.environ.get(DISCORD_KEYS["announce_channel_id"], ""),
     }
 
@@ -342,12 +319,6 @@ def _collect_discord(payload, updates):
         if mode not in DISCORD_MODES:
             raise SettingsError(f"Invalid discord mode: {mode}")
         updates[DISCORD_KEYS["mode"]] = mode
-
-    if "language" in payload:
-        language = str(payload["language"]).strip().lower()
-        if language not in DISCORD_LANGUAGES:
-            raise SettingsError(f"Invalid discord language: {language}")
-        updates[DISCORD_KEYS["language"]] = language
 
     for field in ("owner_id", "request_role_id", "guild_id", "announce_channel_id"):
         if field in payload:
@@ -389,18 +360,16 @@ def read_settings():
         "autosync_schedule": autosync_schedule_description(),
         "path_preview": preview_paths(),
         "movie_folder": _flag("ANIWORLD_MOVIE_FOLDER", "1"),
-        "ui_language": ui_language(),
         "output_format": output_format(),
         "provider_fallback_order": list(get_provider_fallback_order(WORKING_PROVIDERS)),
         "available_providers": list(WORKING_PROVIDERS),
-        "available_ui_languages": list(UI_LANGUAGES),
         "available_output_formats": list(OUTPUT_FORMATS),
         "available_autosync_modes": list(AUTOSYNC_MODES),
         "available_sites": [
             {
                 "key": site,
                 "label": SITE_LABELS[site],
-                "default_on": site not in SITES_OFF_BY_DEFAULT,
+                "default_on": True,
             }
             for site in SITE_KEYS
         ],
@@ -499,12 +468,6 @@ def update_settings(data):
         if field in data:
             updates[key] = "1" if data[field] else "0"
 
-    if "ui_language" in data:
-        language = str(data["ui_language"]).strip().lower()
-        if language not in UI_LANGUAGES:
-            raise SettingsError(f"Invalid ui_language: {language}")
-        updates["ANIWORLD_UI_LANGUAGE"] = language
-
     if "output_format" in data:
         fmt = str(data["output_format"]).strip().lower().lstrip(".")
         if fmt not in OUTPUT_FORMATS:
@@ -549,7 +512,6 @@ def _env_sections():
             "General",
             [
                 ("ANIWORLD_DOWNLOAD_PATH", str(paths.default_download_path())),
-                ("ANIWORLD_UI_LANGUAGE", ui_language()),
             ],
         ),
         (
@@ -596,7 +558,6 @@ def _env_sections():
                 (DISCORD_KEYS["enabled"], _one_or_zero(discord["enabled"])),
                 (DISCORD_KEYS["owner_id"], discord["owner_id"]),
                 (DISCORD_KEYS["mode"], discord["mode"]),
-                (DISCORD_KEYS["language"], discord["language"]),
                 (DISCORD_KEYS["request_role_id"], discord["request_role_id"]),
                 (DISCORD_KEYS["guild_id"], discord["guild_id"]),
                 (DISCORD_KEYS["announce_channel_id"], discord["announce_channel_id"]),

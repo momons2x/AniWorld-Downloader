@@ -25,7 +25,6 @@ _ALIASES = (
     ("vidara.so", "Vidara"),
     ("filemoon", "Filemoon"),
     ("moflix-stream.click", "MoflixClick"),
-    ("gxplayer", "MegaKino"),
 )
 
 

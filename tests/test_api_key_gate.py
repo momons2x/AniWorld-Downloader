@@ -171,13 +171,13 @@ def test_an_admin_key_can_read_settings(client, api_key):
 def test_an_admin_key_can_change_settings(client, api_key):
     raw, _ = api_key(scope="admin")
     response = client.put(
-        "/api/settings", json={"enable_htv": True}, headers=headers(raw)
+        "/api/settings", json={"enable_nineanime": False}, headers=headers(raw)
     )
     assert response.status_code == 200
 
     from aniworld.web import settings_store
 
-    assert settings_store.htv_enabled() is True
+    assert settings_store.site_enabled("nineanime") is False
 
 
 def test_an_admin_key_can_add_a_custom_path(client, api_key, tmp_path):

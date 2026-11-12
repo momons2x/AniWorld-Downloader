@@ -1,7 +1,5 @@
 """Library, genre and page endpoints."""
 
-from urllib.parse import parse_qs, urlsplit
-
 import curl_cffi.requests
 import niquests
 import pytest
@@ -18,18 +16,16 @@ def empty_browse_cache():
     api_media._browse_cache.clear()
 
 
-@pytest.mark.parametrize("site", ["moflix", "aniworld", "htv"])
+@pytest.mark.parametrize("site", ["aniworld", "nineanime", "miruro"])
 def test_search_errors_are_reported_without_exposing_exception_details(
     client, monkeypatch, caplog, site
 ):
-    from aniworld import search
     from aniworld.web import sitesearch
 
     def fail(keyword):
         raise RuntimeError("private-session-value")
 
     monkeypatch.setitem(sitesearch.SITE_SEARCH, site, fail)
-    monkeypatch.setattr(search, "query_hanime", fail)
     response = client.post("/api/search", json={"site": site, "keyword": "test"})
     assert response.status_code == 502
     assert "error" in response.get_json()
@@ -39,8 +35,8 @@ def test_search_errors_are_reported_without_exposing_exception_details(
 
 
 def test_search_distinguishes_no_matches_from_upstream_failure(client, monkeypatch):
-    monkeypatch.setitem(api_media.sitesearch.SITE_SEARCH, "moflix", lambda keyword: [])
-    response = client.post("/api/search", json={"site": "moflix", "keyword": "test"})
+    monkeypatch.setitem(api_media.sitesearch.SITE_SEARCH, "nineanime", lambda keyword: [])
+    response = client.post("/api/search", json={"site": "nineanime", "keyword": "test"})
     assert response.status_code == 200
     assert response.get_json() == {"results": []}
 
@@ -51,61 +47,16 @@ def test_aggregate_search_can_still_skip_a_failed_source(monkeypatch):
     def fail(keyword):
         raise RuntimeError("upstream down")
 
-    monkeypatch.setattr(sitesearch, "MOVIE_SITES", ("moflix", "kinox"))
-    monkeypatch.setitem(sitesearch.SITE_SEARCH, "moflix", fail)
+    monkeypatch.setattr(sitesearch, "MOVIE_SITES", ("miruro", "reanime"))
+    monkeypatch.setitem(sitesearch.SITE_SEARCH, "miruro", fail)
     monkeypatch.setitem(
         sitesearch.SITE_SEARCH,
-        "kinox",
+        "reanime",
         lambda keyword: [
-            {"title": "Example", "url": "https://kinox.to/Stream/test.html"}
+            {"title": "Example", "url": "https://re-anime.to/anime/example"}
         ],
     )
-    assert sitesearch.aggregate("test", "movie")[0]["site"] == "kinox"
-
-
-@pytest.mark.parametrize(
-    "method,path,body",
-    [
-        ("post", "/api/search", {"site": "moflix", "keyword": "test"}),
-        ("get", "/api/moflix-movies", None),
-        ("get", "/api/genre?site=moflix&slug=Action", None),
-    ],
-)
-def test_moflix_failures_have_public_errors_and_can_be_retried(
-    client, monkeypatch, method, path, body
-):
-    import json
-
-    from aniworld.models.moflix_stream import http
-
-    calls = []
-
-    def fetch(url, *args):
-        calls.append(url)
-        response = http.requests.Response()
-        response.status_code = 200
-        if len(calls) == 1:
-            response.content = b"<title>Just a moment...</title>"
-        elif url == http.BASE_URL + "/":
-            response.content = b'window.bootstrapData = {"csrf_token": "test"};'
-        else:
-            title = {"id": 42, "name": "Silo", "model_type": "title"}
-            response.headers["Content-Type"] = "application/json"
-            response.content = json.dumps(
-                {"results": [title], "titles": [title], "pagination": {"data": [title]}}
-            ).encode()
-        return response
-
-    monkeypatch.setattr(http, "get_response", fetch)
-    request = getattr(client, method)
-    failed = request(path, json=body)
-    assert failed.status_code == 502
-    assert "verification" in failed.get_json()["error"]
-    assert api_media._browse_cache == {}
-    retried = request(path, json=body)
-    assert retried.status_code == 200
-    assert retried.get_json()["results"][0]["title"] == "Silo"
-    assert len(calls) == 3
+    assert sitesearch.aggregate("test", "movie")[0]["site"] == "reanime"
 
 
 # ---------------------------------------------------------------------------
@@ -317,61 +268,35 @@ def test_an_unknown_site_offers_no_genres(client):
     assert client.get("/api/genre?site=unknown&slug=action").status_code == 400
 
 
-def test_moflix_uses_the_same_genre_endpoints(client, monkeypatch):
-    from aniworld import search
-
-    def fetch(endpoint):
-        limit = int(parse_qs(urlsplit(endpoint).query)["limit"][0])
-        assert 1 <= limit <= 12
-        return {
-            "genres": ["Action"],
-            "titles": [
-                {"id": 42 + n, "name": f"Example {n}", "poster": ""}
-                for n in range(limit)
-            ],
-        }
-
-    monkeypatch.setattr(search, "_moflix_json", fetch)
-    assert client.get("/api/genres?site=moflix").get_json() == {
-        "genres": [{"name": "Action", "slug": "Action"}]
-    }
-    response = client.get("/api/genre?site=moflix&slug=Action")
-    assert response.status_code == 200
-    body = response.get_json()
-    assert len(body["results"]) == 12
-    assert body["results"][0]["url"] == "https://moflix-stream.xyz/titles/42"
-    assert body["has_more"] is False
-
-
 @pytest.mark.parametrize("library", [niquests, curl_cffi.requests])
 @pytest.mark.parametrize("status", [404, 422, 503])
 def test_genre_http_errors_return_json(client, monkeypatch, library, status):
-    def fetch(site, genre, limit):
+    def fetch(slug, page):
         response = library.Response()
         response.status_code = status
         raise library.exceptions.HTTPError("upstream error", response=response)
 
-    monkeypatch.setattr(api_media.sitesearch, "genre_results", fetch)
-    response = client.get("/api/genre?site=moflix&slug=Action")
+    monkeypatch.setattr(api_media, "fetch_genre_animes", fetch)
+    response = client.get("/api/genre?site=aniworld&slug=Action")
     assert response.status_code == (404 if status == 404 else 502)
     assert response.get_json() == {
         "error": "Genre not available: Action"
         if status == 404
         else "Failed to fetch genre Action"
     }
-    assert "genre:moflix:Action:1" not in api_media._browse_cache
+    assert "genre:aniworld:Action:1" not in api_media._browse_cache
 
 
 @pytest.mark.parametrize("library", [niquests, curl_cffi.requests])
 def test_genre_timeouts_return_json(client, monkeypatch, library):
-    def fetch(site, genre, limit):
+    def fetch(slug, page):
         raise library.exceptions.Timeout("upstream timed out")
 
-    monkeypatch.setattr(api_media.sitesearch, "genre_results", fetch)
-    response = client.get("/api/genre?site=moflix&slug=Action")
+    monkeypatch.setattr(api_media, "fetch_genre_animes", fetch)
+    response = client.get("/api/genre?site=aniworld&slug=Action")
     assert response.status_code == 502
     assert response.get_json() == {"error": "Failed to fetch genre Action"}
-    assert "genre:moflix:Action:1" not in api_media._browse_cache
+    assert "genre:aniworld:Action:1" not in api_media._browse_cache
 
 
 def test_the_genre_list_is_cached_per_site(client, monkeypatch):
@@ -383,11 +308,12 @@ def test_the_genre_list_is_cached_per_site(client, monkeypatch):
         calls.append(site)
         return [{"name": "Horror", "slug": "horror"}]
 
+    monkeypatch.setattr(sitesearch, "GENRE_SITES", ("miruro", "reanime"))
     monkeypatch.setattr(sitesearch, "genres", listing)
-    client.get("/api/genres?site=kinox")
-    client.get("/api/genres?site=kinox")
-    client.get("/api/genres?site=megakino")
-    assert calls == ["kinox", "megakino"], "only the second kinox call is cached"
+    client.get("/api/genres?site=miruro")
+    client.get("/api/genres?site=miruro")
+    client.get("/api/genres?site=reanime")
+    assert calls == ["miruro", "reanime"], "only the second miruro call is cached"
 
 
 @pytest.fixture
@@ -395,6 +321,7 @@ def flat_listing(monkeypatch):
     """Every site but aniworld hands back one list instead of pages."""
     from aniworld.web import sitesearch
 
+    monkeypatch.setattr(sitesearch, "GENRE_SITES", ("miruro",))
     calls = []
     titles = [
         {"title": f"Movie {n}", "url": f"https://kinox.to/{n}.html", "poster": ""}
@@ -411,9 +338,9 @@ def flat_listing(monkeypatch):
 
 
 def test_a_flat_listing_is_sliced_into_pages(client, flat_listing):
-    body = client.get("/api/genre?site=kinox&slug=Horror&page=2").get_json()
+    body = client.get("/api/genre?site=miruro&slug=Horror&page=2").get_json()
     # one title past the page, which is what settles has_more
-    assert flat_listing == [("kinox", "Horror", 61)]
+    assert flat_listing == [("miruro", "Horror", 61)]
     assert [item["title"] for item in body["results"]] == [
         f"Movie {n}" for n in range(30, 60)
     ]
@@ -423,6 +350,7 @@ def test_a_flat_listing_is_sliced_into_pages(client, flat_listing):
 def test_the_end_of_a_flat_listing_reports_no_more(client, monkeypatch):
     from aniworld.web import sitesearch
 
+    monkeypatch.setattr(sitesearch, "GENRE_SITES", ("miruro",))
     monkeypatch.setattr(
         sitesearch,
         "genre_results",
@@ -431,7 +359,7 @@ def test_the_end_of_a_flat_listing_reports_no_more(client, monkeypatch):
             False,
         ),
     )
-    body = client.get("/api/genre?site=megakino&slug=horror").get_json()
+    body = client.get("/api/genre?site=miruro&slug=horror").get_json()
     assert body["has_more"] is False
     assert body["results"][0]["poster_url"].startswith("/api/proxy-image?url=")
 
@@ -440,6 +368,7 @@ def test_a_full_page_the_site_could_not_fill_still_offers_more(client, monkeypat
     """A title normalising away must not read as the end of the listing."""
     from aniworld.web import sitesearch
 
+    monkeypatch.setattr(sitesearch, "GENRE_SITES", ("miruro",))
     monkeypatch.setattr(
         sitesearch,
         "genre_results",
@@ -451,7 +380,7 @@ def test_a_full_page_the_site_could_not_fill_still_offers_more(client, monkeypat
             True,
         ),
     )
-    body = client.get("/api/genre?site=sto&slug=horror").get_json()
+    body = client.get("/api/genre?site=miruro&slug=horror").get_json()
     assert len(body["results"]) == 30
     assert body["has_more"] is True
 
@@ -459,11 +388,12 @@ def test_a_full_page_the_site_could_not_fill_still_offers_more(client, monkeypat
 def test_a_genre_a_site_does_not_have_is_a_404(client, monkeypatch):
     from aniworld.web import sitesearch
 
+    monkeypatch.setattr(sitesearch, "GENRE_SITES", ("miruro",))
     def results(site, genre, limit):
-        raise ValueError(f"BurningSeries genre not available: {genre}")
+        raise ValueError(f"Genre not available: {genre}")
 
     monkeypatch.setattr(sitesearch, "genre_results", results)
-    response = client.get("/api/genre?site=burningseries&slug=missing")
+    response = client.get("/api/genre?site=miruro&slug=missing")
     assert response.status_code == 404
     assert response.get_json()["error"] == "Genre not available: missing"
 
@@ -552,13 +482,10 @@ def test_the_autosync_page_is_hidden_until_enabled(client, monkeypatch):
     assert client.get("/autosync").status_code == 200
 
 
-def test_hanime_is_hidden_from_the_home_page_by_default(client):
-    assert b'data-site="htv"' not in client.get("/").data
-
-
-def test_hanime_appears_once_enabled(client, monkeypatch):
-    monkeypatch.setenv("ANIWORLD_ENABLE_HTV", "1")
-    assert b'data-site="htv"' in client.get("/").data
+def test_adult_sites_are_never_rendered(client):
+    body = client.get("/").data
+    assert b'data-site="htv"' not in body
+    assert b'data-site="hentaihaven"' not in body
 
 
 def test_the_genre_bar_is_on_the_home_page(client):
@@ -571,3 +498,249 @@ def test_the_favicon_is_served(client):
 
 def test_an_unknown_page_is_a_404(client):
     assert client.get("/nope").status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Playback + AniList metadata endpoints
+# ---------------------------------------------------------------------------
+def test_meta_endpoint_returns_anilist_metadata(client, episode_file, monkeypatch):
+    episode_file("Naruto", 1, 1)
+
+    def fake_get(folder, refresh=False):
+        return {
+            "anilist_id": 20,
+            "title_en": "Naruto",
+            "genres": ["Action"],
+            "score": 78,
+            "year": 2002,
+            "format": "TV",
+            "status": "FINISHED",
+            "cover": "https://cdn.example/cover.jpg",
+            "banner": "https://cdn.example/banner.jpg",
+        }
+
+    monkeypatch.setattr("aniworld.web.views.api_library.anilist.get_meta", fake_get)
+    response = client.get("/api/library/meta?folder=Naruto")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["title_en"] == "Naruto"
+    assert data["score"] == 78
+
+
+def test_meta_endpoint_404_without_a_match(client, episode_file, monkeypatch):
+    episode_file("Naruto", 1, 1)
+    monkeypatch.setattr(
+        "aniworld.web.views.api_library.anilist.get_meta", lambda folder, refresh=False: None
+    )
+    assert client.get("/api/library/meta?folder=Naruto").status_code == 404
+
+
+def test_play_endpoint_mints_token_and_streams(client, episode_file, monkeypatch):
+    episode_file("Naruto", 1, 1)
+    from aniworld.web import playback
+
+    def fake_start_async(folder, season, episode, custom_path_id=None, lang_folder=None):
+        src, _ = __import__("aniworld.web.library", fromlist=["find_video"]).find_video(
+            folder, season, episode
+        )
+        return {"status": "ready", "token": playback.register(src, source_path=src)}
+
+    monkeypatch.setattr(playback, "start_async", fake_start_async)
+    response = client.post(
+        "/api/library/play",
+        json={"folder": "Naruto", "season": 1, "episode": 1},
+    )
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["status"] == "ready"
+    assert data["token"]
+    assert "Naruto S01E001.mkv" in data["label"]
+
+    stream = client.get(f"/api/library/stream?token={data['token']}")
+    assert stream.status_code in (200, 206)
+    assert stream.headers.get("Accept-Ranges") == "bytes"
+
+
+def test_play_endpoint_passes_audio_and_force_transcode(client, episode_file, monkeypatch):
+    src = episode_file("Naruto", 1, 1)
+    from aniworld.web import playback
+
+    captured = {}
+
+    def fake_start_async(
+        folder,
+        season,
+        episode,
+        custom_path_id=None,
+        lang_folder=None,
+        audio_ordinal=None,
+        force_transcode=False,
+    ):
+        captured.update(
+            audio_ordinal=audio_ordinal, force_transcode=force_transcode
+        )
+        token = playback.register(
+            src,
+            source_path=src,
+            audio_tracks=[
+                {"ordinal": 0, "language": "ja", "label": "Japanese", "codec": "aac", "channels": 2, "default": False}
+            ],
+            subtitle_tracks=[
+                {"index": 2, "language": "en", "label": "English", "codec": "ass", "default": True, "forced": False}
+            ],
+            selected_audio=1,
+            mode="remux",
+        )
+        return {"status": "ready", "token": token}
+
+    monkeypatch.setattr(playback, "start_async", fake_start_async)
+    response = client.post(
+        "/api/library/play",
+        json={
+            "folder": "Naruto",
+            "season": 1,
+            "episode": 1,
+            "audio": 1,
+            "force_transcode": True,
+        },
+    )
+    assert response.status_code == 200
+    data = response.get_json()
+    assert captured == {"audio_ordinal": 1, "force_transcode": True}
+    assert data["selected_audio"] == 1
+    assert data["mode"] == "remux"
+    assert data["audio_tracks"][0]["ordinal"] == 0
+    assert data["subtitle_tracks"][0]["url"].startswith(
+        "/api/library/subtitles?token="
+    )
+
+
+def test_play_endpoint_rejects_invalid_audio(client, episode_file):
+    episode_file("Naruto", 1, 1)
+    response = client.post(
+        "/api/library/play",
+        json={"folder": "Naruto", "season": 1, "episode": 1, "audio": "nope"},
+    )
+    assert response.status_code == 400
+
+
+def test_subtitle_endpoint_validates_token_and_track(client):
+    from aniworld.web import playback
+
+    token = playback.register("x.mp4", source_path="x.mp4")
+    assert client.get(f"/api/library/subtitles?token={token}&track=1").status_code == 400
+    assert client.get("/api/library/subtitles?token=nope&track=1").status_code == 400
+    assert client.get("/api/library/subtitles").status_code == 400
+
+
+def test_stream_endpoint_uses_session_mime(client, tmp_path):
+    from aniworld.web import playback
+
+    path = tmp_path / "clip.webm"
+    path.write_bytes(b"x" * 16)
+    token = playback.register(path, source_path=path, mime="video/webm")
+    response = client.get(f"/api/library/stream?token={token}")
+    assert response.status_code in (200, 206)
+    assert response.mimetype == "video/webm"
+
+
+def test_play_endpoint_returns_job_while_preparing(client, episode_file, monkeypatch):
+    episode_file("Naruto", 1, 1)
+    from aniworld.web import playback
+
+    monkeypatch.setattr(
+        playback, "start_async", lambda *a, **k: {"status": "preparing", "job": "abc"}
+    )
+    response = client.post(
+        "/api/library/play",
+        json={"folder": "Naruto", "season": 1, "episode": 1},
+    )
+    assert response.status_code == 202
+    assert response.get_json() == {"status": "preparing", "job": "abc"}
+
+
+def test_play_status_unknown_job(client):
+    response = client.get("/api/library/play/status?job=nope")
+    assert response.status_code == 400
+    response = client.get("/api/library/play/status")
+    assert response.status_code == 400
+
+
+def test_stream_endpoint_rejects_bad_tokens(client):
+    response = client.get("/api/library/stream?token=nope")
+    assert response.status_code == 400
+    response = client.get("/api/library/stream")
+    assert response.status_code == 400
+
+
+def test_play_endpoint_validates_input(client):
+    response = client.post("/api/library/play", json={})
+    assert response.status_code == 400
+    response = client.post(
+        "/api/library/play", json={"folder": "Naruto", "season": 1, "episode": 9}
+    )
+    assert response.status_code == 400
+
+
+def test_hide_endpoint_filters_titles(client, episode_file):
+    episode_file("Naruto", 1, 1)
+    episode_file("Secret", 1, 1)
+    response = client.post(
+        "/api/library/hide", json={"folder": "Secret", "hidden": True}
+    )
+    assert response.get_json() == {"ok": True, "hidden": True}
+    titles = client.get("/api/library/titles").get_json()["titles"]
+    assert [title["folder"] for title in titles] == ["Naruto"]
+    shown = client.get("/api/library/titles?include_hidden=1").get_json()["titles"]
+    assert shown == [
+        {
+            "folder": "Naruto",
+            "title": "Naruto",
+            "poster_url": "",
+            "year": None,
+            "score": None,
+            "genres": [],
+            "categories": ["series"],
+            "hidden": False,
+        },
+        {
+            "folder": "Secret",
+            "title": "Secret",
+            "poster_url": "",
+            "year": None,
+            "score": None,
+            "genres": [],
+            "categories": ["series"],
+            "hidden": True,
+        },
+    ]
+
+
+def test_hide_endpoint_needs_a_folder(client):
+    assert client.post("/api/library/hide", json={}).status_code == 400
+
+
+def test_hide_endpoint_closes_when_the_library_is_off(client, monkeypatch):
+    monkeypatch.setenv("ANIWORLD_ENABLE_LIBRARY", "0")
+    assert client.post("/api/library/hide", json={"folder": "x"}).status_code == 404
+
+
+def test_titles_include_cached_anilist_metadata(client, episode_file):
+    episode_file("Naruto", 1, 1)
+    db.set_library_meta(
+        "Naruto",
+        {
+            "anilist_id": 20,
+            "title_en": "Naruto",
+            "title_romaji": "NARUTO",
+            "cover": "https://cdn.example/cover.jpg",
+            "genres": ["Action", "Adventure"],
+            "score": 82,
+            "year": 2002,
+        },
+    )
+    title = client.get("/api/library/titles").get_json()["titles"][0]
+    assert title["genres"] == ["Action", "Adventure"]
+    assert title["poster_url"] == "https://cdn.example/cover.jpg"
+    assert title["year"] == 2002
+    assert title["score"] == 82

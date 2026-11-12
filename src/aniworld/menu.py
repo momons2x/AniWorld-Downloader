@@ -236,7 +236,7 @@ class MenuApp(npyscreen.NPSApp):
         if not languages:
             # Fallback to something sensible so the UI stays usable.
             # The episode model will validate on use.
-            languages = [os.getenv("ANIWORLD_LANGUAGE", "German Dub")]
+            languages = [os.getenv("ANIWORLD_LANGUAGE", "English Sub")]
 
         if not providers:
             providers = [os.getenv("ANIWORLD_PROVIDER", "VOE")]

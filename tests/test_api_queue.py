@@ -123,32 +123,6 @@ def test_a_custom_path_is_remembered(client, tmp_path):
     assert db.get_queue_item(queue_id)["custom_path_id"] == path_id
 
 
-def test_mangafire_chapters_carry_the_output_format(client):
-    queue_id = client.post(
-        "/api/download",
-        json={
-            "episodes": ["https://mangafire.to/title/z9w-velvet-kisss/chapter/1"],
-            "provider": "MangaFire",
-            "mangafire_format": "epub",
-        },
-    ).get_json()["queue_id"]
-    assert episodes_of(queue_id)[0]["mangafire_format"] == "epub"
-
-
-def test_mangafire_falls_back_to_the_configured_format(client, monkeypatch):
-    monkeypatch.setenv("ANIWORLD_MANGAFIRE_FORMAT", "png")
-    queue_id = client.post(
-        "/api/download",
-        json={
-            "episodes": [
-                {"url": "https://mangafire.to/title/z9w-velvet-kisss/chapter/1"}
-            ],
-            "provider": "MangaFire",
-        },
-    ).get_json()["queue_id"]
-    assert episodes_of(queue_id)[0]["mangafire_format"] == "png"
-
-
 def test_other_providers_are_not_tagged(client):
     queue_id = client.post(
         "/api/download", json={"episodes": ["https://x/ep1"], "provider": "VOE"}

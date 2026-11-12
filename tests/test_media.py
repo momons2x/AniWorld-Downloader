@@ -1,10 +1,7 @@
 """Poster handling, site keys and detecting what is already downloaded."""
 
-from types import SimpleNamespace
-
 import pytest
 
-from aniworld.models.mangafire_to import series as mangafire
 from aniworld.web import db, media
 
 
@@ -49,13 +46,13 @@ def test_an_empty_poster_is_not_proxied():
 
 
 def test_relative_posters_are_made_absolute():
-    absolute = media.absolute_poster("/img/p.jpg", "https://serienstream.to/serie/x")
-    assert absolute == "https://serienstream.to/img/p.jpg"
+    absolute = media.absolute_poster("/img/p.jpg", "https://aniworld.to/anime/stream/x")
+    assert absolute == "https://aniworld.to/img/p.jpg"
 
 
 def test_absolute_posters_are_left_alone():
     url = "https://cdn.example/p.jpg"
-    assert media.absolute_poster(url, "https://serienstream.to/serie/x") == url
+    assert media.absolute_poster(url, "https://aniworld.to/anime/stream/x") == url
 
 
 # ---------------------------------------------------------------------------
@@ -66,7 +63,7 @@ def test_every_site_key_has_a_label():
 
 
 def test_known_sites_are_kept_in_order():
-    assert media.normalize_default_sites(["aniworld", "sto"]) == "aniworld,sto"
+    assert media.normalize_default_sites(["aniworld", "miruro"]) == "aniworld,miruro"
 
 
 def test_unknown_sites_are_dropped():
@@ -74,15 +71,15 @@ def test_unknown_sites_are_dropped():
 
 
 def test_duplicates_are_dropped():
-    assert media.normalize_default_sites(["sto", "sto"]) == "sto"
+    assert media.normalize_default_sites(["miruro", "miruro"]) == "miruro"
 
 
 def test_case_and_whitespace_do_not_matter():
-    assert media.normalize_default_sites([" AniWorld ", "STO"]) == "aniworld,sto"
+    assert media.normalize_default_sites([" AniWorld ", "MIRURO"]) == "aniworld,miruro"
 
 
 def test_a_csv_string_works_too():
-    assert media.normalize_default_sites("aniworld,kinox") == "aniworld,kinox"
+    assert media.normalize_default_sites("aniworld,nineanime") == "aniworld,nineanime"
 
 
 @pytest.mark.parametrize("empty", [None, "", [], "   "])
@@ -202,64 +199,6 @@ def test_folders_from_every_root_are_merged(downloads, tmp_path):
 # ---------------------------------------------------------------------------
 # Misc
 # ---------------------------------------------------------------------------
-def test_the_mangafire_format_defaults_to_jpg():
-    assert media.mangafire_format() == "jpg"
-
-
-def test_the_mangafire_format_can_be_changed(monkeypatch):
-    monkeypatch.setenv("ANIWORLD_MANGAFIRE_FORMAT", "pdf")
-    assert media.mangafire_format() == "pdf"
-
-
-def test_mangafire_loads_every_chapter_page(monkeypatch):
-    calls = []
-    pages = iter(
-        [
-            {"items": [{"id": 1}]},
-            {"items": [{"id": 2}]},
-            {"items": [{"id": 2}]},
-        ]
-    )
-
-    def get(url):
-        calls.append(url)
-        return SimpleNamespace(json=lambda: next(pages))
-
-    monkeypatch.setattr(mangafire, "_get", get)
-    found = mangafire.MangaFireToSeries("https://mangafire.to/title/z9w-velvet-kisss")
-
-    assert found.chapters_data["items"] == [{"id": 1}, {"id": 2}]
-    assert [url.split("page=")[1].split("&")[0] for url in calls] == ["1", "2", "3"]
-
-
-def test_mangafire_retries_after_a_captcha(monkeypatch):
-    responses = iter(
-        [
-            SimpleNamespace(text="challenge", status_code=403),
-            SimpleNamespace(
-                text='{"items": []}',
-                status_code=200,
-                raise_for_status=lambda: None,
-            ),
-        ]
-    )
-    solved = []
-
-    monkeypatch.setattr(
-        mangafire.GLOBAL_SESSION, "get", lambda *_args, **_kwargs: next(responses)
-    )
-    monkeypatch.setattr(mangafire, "sign_url", lambda url: f"{url}?signed")
-    monkeypatch.setattr(
-        mangafire, "is_captcha_page", lambda _body, status: status == 403
-    )
-    monkeypatch.setattr(mangafire, "solve_captcha", solved.append)
-
-    response = mangafire._get("https://mangafire.to/api/top-titles")
-
-    assert response.status_code == 200
-    assert solved == ["https://mangafire.to/api/top-titles?signed"]
-
-
 def test_only_implemented_providers_are_offered():
     assert media.WORKING_PROVIDERS, "at least one provider must be usable"
     assert "VOE" in media.WORKING_PROVIDERS
@@ -268,42 +207,36 @@ def test_only_implemented_providers_are_offered():
 # ---------------------------------------------------------------------------
 # Site tabs that can be switched off
 # ---------------------------------------------------------------------------
-def test_burningseries_and_kinox_are_hidden_by_default(client):
-    """Both need a captcha nobody can solve for you, so they are opt in."""
+def test_adult_sites_are_never_rendered(client, monkeypatch):
+    """Adult sites are gone, so their tabs stay out even when asked for."""
+    monkeypatch.setenv("ANIWORLD_ENABLE_HTV", "1")
+    monkeypatch.setenv("ANIWORLD_ENABLE_HENTAIHAVEN", "1")
     body = client.get("/").get_data(as_text=True)
-    assert 'data-site="burningseries"' not in body
-    assert 'data-site="kinox"' not in body
-    assert 'data-row="burningseries_series"' not in body
-    assert 'data-row="kinox_movies"' not in body
+    assert 'data-site="htv"' not in body
+    assert 'data-site="hentaihaven"' not in body
     # the sites nobody gated are still there
     assert 'data-site="aniworld"' in body
-    assert 'data-site="filmpalast"' in body
-
-
-def test_the_flags_bring_the_tabs_back(client, monkeypatch):
-    monkeypatch.setenv("ANIWORLD_ENABLE_BURNINGSERIES", "1")
-    monkeypatch.setenv("ANIWORLD_ENABLE_KINOX", "1")
-    body = client.get("/").get_data(as_text=True)
-    assert 'data-site="burningseries"' in body
-    assert 'data-site="kinox"' in body
-    assert 'data-row="burningseries_series"' in body
-    assert 'data-row="kinox_movies"' in body
-
-
-def test_one_flag_does_not_turn_on_the_other(client, monkeypatch):
-    monkeypatch.setenv("ANIWORLD_ENABLE_KINOX", "1")
-    body = client.get("/").get_data(as_text=True)
-    assert 'data-site="kinox"' in body
-    assert 'data-site="burningseries"' not in body
 
 
 def test_hiding_a_tab_leaves_its_neighbours_alone(client):
-    """The browse rows sit in one list, so a bad {% if %} would swallow them."""
+    """The browse rows sit in one list, so a bad {% if %} would swallow them.
+
+    Each row also has to name the site that serves it, or it would light up
+    under a tab whose endpoint does not exist.
+    """
     body = client.get("/").get_data(as_text=True)
-    assert 'data-row="kinox_movies"' not in body
-    for row in (
-        "popular_movies",
-        "filmpalast_movies",
-        "mangafire_trending",
-    ):
-        assert f'data-row="{row}"' in body, row
+    rows = {
+        "new_animes": "aniworld",
+        "popular_animes": "aniworld",
+        "nineanime_latest": "nineanime",
+        "nineanime_popular": "nineanime",
+        "miruro_latest": "miruro",
+        "reanime_latest": "reanime",
+        "reanime_trending": "reanime",
+    }
+    for row, site in rows.items():
+        section = (
+            '<section class="browse-section" '
+            f'data-row="{row}" data-sites="{site}">'
+        )
+        assert section in body, row

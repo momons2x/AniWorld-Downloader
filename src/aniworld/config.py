@@ -184,14 +184,19 @@ logger.debug(
 # -----------------------------
 SUPPORTED_PROVIDERS = (
     "VOE",
-    "MegaKino",
     "Vidmoly",
     "Vidoza",
     "Doodstream",
     "Filemoon",
     "Gupload",
-    "MoflixClick",
+    "MegaPlay",
     "Vidara",
+    "MiruroHop",
+    "MiruroBee",
+    "MiruroSun",
+    "MiruroBun",
+    "ReAnimeHD1",
+    "ReAnimeHD2",
 )
 
 
@@ -281,11 +286,20 @@ PROVIDER_HEADERS_D = {
     },
     "Filemoon": {"User-Agent": DEFAULT_USER_AGENT, "Referer": "https://filemoon.to"},
     "Gupload": {"Referer": "https://gupload.xyz/", "Accept-Encoding": "identity"},
-    "MoflixClick": {
-        "Referer": "https://moflix-stream.click/",
-        "Accept-Encoding": "identity",
-    },
     "Vidara": {"Referer": "https://vidara.to/"},
+    "MegaPlay": {"Referer": "https://megaplay.buzz/"},
+    "MiruroHop": {
+        "Referer": "https://krussdomi.com/",
+        "Origin": "https://krussdomi.com",
+    },
+    "MiruroBee": {"Referer": "https://megaplay.buzz/"},
+    "MiruroSun": {
+        "Origin": "https://ultracloud.cc",
+        "Referer": "https://ultracloud.cc/",
+    },
+    "MiruroBun": {"Referer": "https://krussdomi.com/"},
+    "ReAnimeHD1": {"Referer": "https://flixcloud.cc/"},
+    "ReAnimeHD2": {"Referer": "https://flixcloud.cc/"},
 }
 
 PROVIDER_HEADERS_W = {
@@ -307,11 +321,20 @@ PROVIDER_HEADERS_W = {
     },
     "Filemoon": {"User-Agent": DEFAULT_USER_AGENT, "Referer": "https://filemoon.to"},
     "Gupload": {"Referer": "https://gupload.xyz/", "Accept-Encoding": "identity"},
-    "MoflixClick": {
-        "Referer": "https://moflix-stream.click/",
-        "Accept-Encoding": "identity",
-    },
     "Vidara": {"Referer": "https://vidara.to/"},
+    "MegaPlay": {"Referer": "https://megaplay.buzz/"},
+    "MiruroHop": {
+        "Referer": "https://krussdomi.com/",
+        "Origin": "https://krussdomi.com",
+    },
+    "MiruroBee": {"Referer": "https://megaplay.buzz/"},
+    "MiruroSun": {
+        "Origin": "https://ultracloud.cc",
+        "Referer": "https://ultracloud.cc/",
+    },
+    "MiruroBun": {"Referer": "https://krussdomi.com/"},
+    "ReAnimeHD1": {"Referer": "https://flixcloud.cc/"},
+    "ReAnimeHD2": {"Referer": "https://flixcloud.cc/"},
 }
 
 
@@ -323,18 +346,15 @@ class Audio(Enum):
     Available audio language options:
 
         - JAPANESE: Japanese dubbed audio
-        - GERMAN:   German dubbed audio
         - ENGLISH:  English dubbed audio
 
     Required source for each option:
 
-        Japanese Dub -> Source: German Sub, English Sub
-        German Dub   -> Source: German Dub
+        Japanese Dub -> Source: English Sub
         English Dub  -> Source: English Dub
     """
 
     JAPANESE = "Japanese"
-    GERMAN = "German"
     ENGLISH = "English"
 
 
@@ -343,41 +363,38 @@ class Subtitles(Enum):
     Available subtitle language options:
 
         - NONE:    No subtitles
-        - GERMAN:  German subtitles
         - ENGLISH: English subtitles
+        - INDONESIAN: Indonesian subtitles
 
     Required source for each option:
 
-        German Sub   -> Source: German Sub
         English Sub  -> Source: English Sub
+        Indonesian Sub -> Source: Indonesian Sub
     """
 
     NONE = "None"
-    GERMAN = "German"
     ENGLISH = "English"
+    INDONESIAN = "Indonesian"
 
 
 # Map site-specific language keys to semantic meaning
 LANG_KEY_MAP = {
-    "1": (Audio.GERMAN, Subtitles.NONE),  # German Dub
     "2": (Audio.JAPANESE, Subtitles.ENGLISH),  # English Sub
-    "3": (Audio.JAPANESE, Subtitles.GERMAN),  # German Sub
     "4": (Audio.ENGLISH, Subtitles.NONE),  # English Dub
+    "5": (Audio.JAPANESE, Subtitles.INDONESIAN),  # Indonesian Sub
 }
 
 LANG_LABELS = {
-    "1": "German Dub",
     "2": "English Sub",
-    "3": "German Sub",
     "4": "English Dub",
+    "5": "Indonesian Sub",
 }
 
 LANG_CODE_MAP = {
     Audio.ENGLISH: "eng",
-    Audio.GERMAN: "deu",
     Audio.JAPANESE: "jpn",
     Subtitles.ENGLISH: "eng",
-    Subtitles.GERMAN: "deu",
+    Subtitles.INDONESIAN: "ind",
     Subtitles.NONE: None,
 }
 
@@ -389,158 +406,9 @@ INVERSE_LANG_LABELS = {v: k for k, v in LANG_LABELS.items()}
 # Patterns
 # -----------------------------
 
-
-ANIWORLD_SERIES_PATTERN = re.compile(
-    r"^https?://(www\.)?aniworld\.to/anime/stream/[a-zA-Z0-9\-]+/?$", re.IGNORECASE
-)
-
-# series slug + (/staffel-N or /filme)
-ANIWORLD_SEASON_PATTERN = re.compile(
-    r"^https?://(www\.)?aniworld\.to/anime/stream/"
-    r"[a-zA-Z0-9\-]+/"
-    r"(staffel-\d+|filme)"
-    r"/?$",
-    re.IGNORECASE,
-)
-
-ANIWORLD_EPISODE_PATTERN = re.compile(
-    r"^https?://(www\.)?aniworld\.to/anime/stream/"
-    r"[a-zA-Z0-9\-]+/"  # series slug
-    r"(staffel-\d+/episode-\d+|"  # season/episode
-    r"filme/film-\d+)"  # movie/film
-    r"/?$",
-    re.IGNORECASE,
-)
-
-HANIME_TV_SERIES_PATTERN = re.compile(
-    r"^https?://(?:www\.)?hanime\.tv/"
-    r"(?:videos/hentai|hentai/video|playlists/[0-9a-z]+/video)/"
-    r"[A-Za-z0-9\-]+/?$",
-    re.IGNORECASE,
-)
-
-HENTAI_TV_EPISODE_PATTERN = re.compile(
-    r"^https?://(?:www\.)?hentai\.tv/hentai/[A-Za-z0-9-]+/?$",
-    re.IGNORECASE,
-)
-
-ANIME_ID_HENTAI_EPISODE_PATTERN = re.compile(
-    r"^https?://(?:www\.)?animeidhentai\.com/"
-    r"(?:\d+/[A-Za-z0-9-]+|"
-    r"[A-Za-z0-9-]+(?:-episode-\d+|-sub-eng|-raw)[A-Za-z0-9-]*)/?$",
-    re.IGNORECASE,
-)
-
-HENTAI_HAVEN_SERIES_PATTERN = re.compile(
-    r"^https?://(?:www\.)?hentaihaven\.xxx/(?:[a-z]{2}/)?watch/[A-Za-z0-9-]+/?$",
-    re.IGNORECASE,
-)
-
-# Some titles call their only video "season-1" rather than "episode-1"
-HENTAI_HAVEN_EPISODE_PATTERN = re.compile(
-    r"^https?://(?:www\.)?hentaihaven\.xxx/(?:[a-z]{2}/)?watch/"
-    r"[A-Za-z0-9-]+/(?:episode|season)-\d+/?$",
-    re.IGNORECASE,
-)
-
-# serienstream.to went down at times; serienstream.cx and 186.2.175.5 are mirrors.
-
-# Reachable hosts, in preference order. The IP is a last resort and needs a Host
-# header (see models/s_to/http.py) because it serves the same site.
-STO_DOMAINS = ["serienstream.to", "serienstream.cx"]
-STO_IP = "186.2.175.5"
-
-# Retired hosts that are still recognised and rewritten onto an active host, but
-# never requested themselves. Keeps old links and bookmarks working.
-STO_LEGACY_DOMAINS = ["s.to"]
-
-STO_ALL_HOSTS = [*STO_DOMAINS, STO_IP, *STO_LEGACY_DOMAINS]
-
-STO_HOST_PATTERN = (
-    r"(?:www\.)?(?:" + "|".join(re.escape(h) for h in STO_ALL_HOSTS) + r")"
-)
-
-STO_HOST_RE = re.compile(
-    r"^(https?://)" + STO_HOST_PATTERN + r"(?=[:/?#]|$)", re.IGNORECASE
-)
-
-
-def is_sto_host(url):
-    """True if the URL points at any known serienstream host."""
-    return bool(STO_HOST_RE.match(str(url or "")))
-
-
-SERIENSTREAM_SERIES_PATTERN = re.compile(
-    rf"^https?://{STO_HOST_PATTERN}/serie/[a-zA-Z0-9\-]+/?$", re.IGNORECASE
-)
-
-SERIENSTREAM_SEASON_PATTERN = re.compile(
-    rf"^https?://{STO_HOST_PATTERN}/serie/"
-    r"[a-zA-Z0-9\-]+/"
-    r"staffel-\d+"
-    r"/?$",
-    re.IGNORECASE,
-)
-
-SERIENSTREAM_EPISODE_PATTERN = re.compile(
-    rf"^https?://{STO_HOST_PATTERN}/serie/"
-    r"[a-zA-Z0-9\-]+/"
-    r"staffel-\d+/episode-\d+"
-    r"/?$",
-    re.IGNORECASE,
-)
-
-MEGAKINO_SERIES_PATTERN = re.compile(
-    r"^https?://(?:www\.)?megakino[\w-]*\.[^/]+/(?:action|films|serials)/[^?#]+(?:\.html)?/?(?:#mkep=\d+)?$",
-    re.IGNORECASE,
-)
-
-MANGA_FIRE_SERIES_PATTERN = re.compile(
-    r"^https?://(?:www\.)?mangafire\.to/title/[a-zA-Z0-9]+(?:-[a-zA-Z0-9\-]+)?/?$",
-    re.IGNORECASE,
-)
-
-MANGA_FIRE_CHAPTER_PATTERN = re.compile(
-    r"^https?://(?:www\.)?mangafire\.to/title/[a-zA-Z0-9]+(?:-[a-zA-Z0-9\-]+)?/(?:chapter/[0-9]+(?:\.[0-9]+)?|volume/[0-9]+)/?$",
-    re.IGNORECASE,
-)
-
-FILMPALAST_HOST_PATTERN = r"(?:www\.)?filmpalast\.[^/]+"
-
-FILMPALAST_SERIES_PATTERN = re.compile(
-    rf"^https?://{FILMPALAST_HOST_PATTERN}/stream/[^/?#]+/?$",
-    re.IGNORECASE,
-)
-
-# The trailing (?:\?[^#]*)? lets per-episode URLs (…?s=1&e=2) resolve too.
-KINOX_SERIES_PATTERN = re.compile(
-    r"^https?://(?:www\.)?kinox[\w.-]*\.[^/]+/Stream/[^/?#]+?(?:\.html)?(?:\?[^#]*)?/?$",
-    re.IGNORECASE,
-)
-
-BS_HOST_PATTERN = r"(?:www\.)?(?:burning-series\.(?:io|net)|burningseries\.(?:ac|cx)|bs\.cine\.to|bs\.to)"
-
-BURNINGSERIES_SERIES_PATTERN = re.compile(
-    rf"^https?://{BS_HOST_PATTERN}/serie/[a-zA-Z0-9\-]+(?:\?[^#]*)?/?$",
-    re.IGNORECASE,
-)
-
-# /serie/<slug>/<season>[/<lang>]
-BURNINGSERIES_SEASON_PATTERN = re.compile(
-    rf"^https?://{BS_HOST_PATTERN}/serie/[a-zA-Z0-9\-]+/\d+(?:/[a-z]{{2}})?/?$",
-    re.IGNORECASE,
-)
-
-# /serie/<slug>/<season>/<episode-slug>/<lang>
-BURNINGSERIES_EPISODE_PATTERN = re.compile(
-    rf"^https?://{BS_HOST_PATTERN}/serie/[a-zA-Z0-9\-]+/\d+/[^/]+/[a-z]{{2}}/?$",
-    re.IGNORECASE,
-)
-
 # -----------------------------
 # Directories
 # -----------------------------
-
 # TODO: add many other directories and use them throughout the app
 
 
@@ -560,10 +428,41 @@ MPV_CONFIG_DIR = _mpv_config_dir()
 MPV_SCRIPTS_DIR = MPV_CONFIG_DIR / "scripts"
 
 
-MOFLIX_SERIES_PATTERN = re.compile(
-    r"^https?://(?:www\.)?moflix-stream\.xyz/titles/(?P<title_id>[0-9]+)"
-    r"(?:/(?!season(?:[/?]|$)|episodes(?:[/?]|$))[^/?#]+)?"
-    r"(?P<episode_path>/season/[0-9]+(?:/episodes/[0-9]+)?)?/?"
-    r"(?P<query>\?[^#]*)?$",
+# 9anime.org.lv: English sub/dub anime (Themesia "Animestream" theme).
+# Title pages live at /anime/<slug>/ (the bare /<slug>/ alias answers too),
+# episodes at /<slug>-episode-<n>/ — the negative lookahead keeps the series
+# pattern from swallowing episode links, which resolve_provider checks first.
+NINEANIME_SERIES_PATTERN = re.compile(
+    r"^https?://(?:www\.)?9anime\.org\.lv/(?:anime/)?"
+    r"(?!.*-episode-\d+/?$)[a-zA-Z0-9\-]+/?$",
+    re.IGNORECASE,
+)
+NINEANIME_SEASON_PATTERN = NINEANIME_SERIES_PATTERN
+NINEANIME_EPISODE_PATTERN = re.compile(
+    r"^https?://(?:www\.)?9anime\.org\.lv/(?:anime/)?[a-zA-Z0-9\-]+-episode-\d+/?$",
+    re.IGNORECASE,
+)
+
+# Miruro (miruro.tv): English sub/dub anime streaming (HLS).
+# Series pages are /info/<id>[/<slug>], episodes are /watch/<id>/episode/<n>.
+MIRURO_SERIES_PATTERN = re.compile(
+    r"^https?://(?:www\.)?miruro\.tv/info/(?P<media_id>[A-Za-z0-9\-_]+)(?:/[^/]+)?/?$",
+    re.IGNORECASE,
+)
+MIRURO_SEASON_PATTERN = MIRURO_SERIES_PATTERN
+MIRURO_EPISODE_PATTERN = re.compile(
+    r"^https?://(?:www\.)?miruro\.tv/watch/(?P<media_id>[A-Za-z0-9\-_]+)(?:/[^/]+)?/episode/(?P<episode>\d+)/?$",
+    re.IGNORECASE,
+)
+
+# Re:Anime (reanime.to): English sub/dub anime streaming (flixcloud HLS).
+# Series pages are /anime/<id>, episodes are /watch/<id>?ep=<n>.
+REANIME_SERIES_PATTERN = re.compile(
+    r"^https?://(?:www\.)?reanime\.to/anime/(?P<anime_id>[a-zA-Z0-9\-]+)/?$",
+    re.IGNORECASE,
+)
+REANIME_SEASON_PATTERN = REANIME_SERIES_PATTERN
+REANIME_EPISODE_PATTERN = re.compile(
+    r"^https?://(?:www\.)?reanime\.to/watch/(?P<anime_id>[a-zA-Z0-9\-]+)(?:\?ep=(?P<episode>\d+))?/?$",
     re.IGNORECASE,
 )

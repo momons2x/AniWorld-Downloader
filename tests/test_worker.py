@@ -64,24 +64,17 @@ def test_a_plain_url_entry():
 def test_a_dict_entry_keeps_its_extras():
     url, extra = worker._episode_request(
         {
-            "url": "  https://mangafire.to/title/z9w-velvet-kisss/chapter/1  ",
+            "url": "  https://moflix-stream.xyz/titles/42/season/2/episodes/3  ",
             "selected_pages": [1, 2],
-            "series_url": "https://mangafire.to/title/z9w-velvet-kisss",
-            "mangafire_format": "epub",
+            "series_url": "https://moflix-stream.xyz/titles/42",
         }
     )
-    assert url == "https://mangafire.to/title/z9w-velvet-kisss/chapter/1", (
+    assert url == "https://moflix-stream.xyz/titles/42/season/2/episodes/3", (
         "surrounding whitespace is trimmed"
     )
     assert extra["selected_pages"] == [1, 2]
-    assert extra["_series_url"] == "https://mangafire.to/title/z9w-velvet-kisss"
-    assert extra["_format"] == "epub"
-
-
-def test_a_missing_format_falls_back_to_the_setting(monkeypatch):
-    monkeypatch.setenv("ANIWORLD_MANGAFIRE_FORMAT", "png")
-    _, extra = worker._episode_request({"url": "https://x/ep1"})
-    assert extra["_format"] == "png"
+    assert extra["_series_url"] == "https://moflix-stream.xyz/titles/42"
+    assert "_format" not in extra
 
 
 def test_page_zero_is_still_passed_along():

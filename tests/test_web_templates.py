@@ -22,9 +22,8 @@ def _site_config(client):
 @pytest.mark.parametrize(
     ("site", "languages"),
     [
-        ("aniworld", ["German Dub", "English Sub", "German Sub", "English Dub"]),
-        ("sto", ["German Dub", "English Dub"]),
-        ("megakino", ["German Dub"]),
+        ("aniworld", ["German Dub", "English Sub", "German Sub", "English Dub", "Indonesian Sub"]),
+        ("nineanime", ["English Sub", "English Dub"]),
     ],
 )
 def test_home_renders_site_languages(client, site, languages):
@@ -48,3 +47,9 @@ def test_home_offers_every_language_when_asked(client, monkeypatch):
     assert settings["SHOW_ALL_LANGUAGES"] is True
     # The page still has to drop English Sub itself, the probe no longer does
     assert settings["ENGLISH_SUB_DISABLED"] is True
+
+
+def test_the_my_anime_tab_is_on_the_home_page(client):
+    response = client.get("/")
+    assert b'data-site="local"' in response.data
+    assert b"My Anime" in response.data

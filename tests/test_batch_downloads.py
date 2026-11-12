@@ -146,9 +146,9 @@ def test_no_season_still_loops_episodes_unguarded():
 
 
 # ---------------------------------------------------------------------------
-# Series must delegate to Season, not loop episodes itself (issue #274,
-# follow-up: s_to, hanime_tv and aniworld_to still reimplemented the loop
-# at the Series level, bypassing the run_each() guard entirely)
+# Series must guard its own batch with run_each(), not a bare loop (issue
+# #274, follow-up: aniworld_to and hanime_tv reimplemented the loop at the
+# Series level and let one failure abort the whole batch)
 # ---------------------------------------------------------------------------
 class FakeSeason:
     """A season exactly as batch-safe as the real ones: delegates to run_each."""
@@ -168,19 +168,22 @@ class FakeSeason:
 
 _SERIES_PROVIDERS = [
     (
-        "aniworld.models.aniworld_to.series",
-        "AniworldSeries",
-        "https://aniworld.to/anime/stream/example-series",
+        "aniworld.models.nineanime.series",
+        "NineAnimeSeries",
+        "https://9anime.org.lv/anime/a-certain-dark-item/",
     ),
     (
-        "aniworld.models.s_to.series",
-        "SerienstreamSeries",
-        "https://serienstream.to/serie/example-series",
+        "aniworld.models.miruro.series",
+        "MiruroSeries",
+        (
+            "https://miruro.tv/info/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/"
+            "even-the-student-council-has-its-holes"
+        ),
     ),
     (
-        "aniworld.models.hanime_tv.series",
-        "HanimeTVSeries",
-        "https://hanime.tv/videos/hentai/example-video-1",
+        "aniworld.models.reanime.series",
+        "ReanimeSeries",
+        "https://reanime.to/anime/even-the-student-council-has-its-holes-6ayeba",
     ),
 ]
 
@@ -190,8 +193,8 @@ def test_series_delegates_to_season_so_one_failure_does_not_abort_the_batch(
     monkeypatch, module_path, class_name, url
 ):
     """A single failed episode must not kill Series.download() either -
-    Series has to go through Season (which already guards with run_each()),
-    not loop season.episodes directly."""
+    Series has to guard the batch with run_each() the same way Season
+    does, not loop season.episodes directly."""
     import importlib
 
     module = importlib.import_module(module_path)

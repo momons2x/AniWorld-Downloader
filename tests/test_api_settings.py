@@ -20,8 +20,8 @@ def test_a_setting_can_be_changed(client):
 
 
 def test_the_change_shows_up_on_the_next_read(client):
-    client.put("/api/settings", json={"enable_htv": True})
-    assert client.get("/api/settings").get_json()["enable_htv"] is True
+    client.put("/api/settings", json={"enable_nineanime": True})
+    assert client.get("/api/settings").get_json()["enable_nineanime"] is True
 
 
 def test_an_invalid_setting_is_a_400_with_a_reason(client):
@@ -195,10 +195,10 @@ def test_default_sites_are_cleaned_up(client, tmp_path):
         json={
             "name": "Movies",
             "path": str(tmp_path),
-            "default_sites": ["megakino", "myspace"],
+            "default_sites": ["miruro", "myspace"],
         },
     )
-    assert db.get_custom_path(response.get_json()["id"])["default_sites"] == "megakino"
+    assert db.get_custom_path(response.get_json()["id"])["default_sites"] == "miruro"
 
 
 def test_a_custom_path_can_be_renamed(client, tmp_path):
@@ -211,11 +211,11 @@ def test_a_custom_path_can_be_renamed(client, tmp_path):
 
 
 def test_updating_one_field_leaves_the_others(client, tmp_path):
-    path_id = db.add_custom_path("Movies", str(tmp_path), "megakino")
+    path_id = db.add_custom_path("Movies", str(tmp_path), "miruro")
     client.put(f"/api/custom-paths/{path_id}", json={"name": "Films"})
     entry = db.get_custom_path(path_id)
     assert entry["path"] == str(tmp_path)
-    assert entry["default_sites"] == "megakino"
+    assert entry["default_sites"] == "miruro"
 
 
 @pytest.mark.parametrize("blank", ["", "   "])
@@ -238,14 +238,14 @@ def test_the_name_cannot_be_blanked(client, tmp_path, blank):
 
 
 def test_a_blanked_field_does_not_apply_the_others(client, tmp_path):
-    path_id = db.add_custom_path("Movies", str(tmp_path), "megakino")
+    path_id = db.add_custom_path("Movies", str(tmp_path), "miruro")
     client.put(
         f"/api/custom-paths/{path_id}",
         json={"name": "Films", "path": "", "default_sites": []},
     )
     entry = db.get_custom_path(path_id)
     assert entry["name"] == "Movies"
-    assert entry["default_sites"] == "megakino"
+    assert entry["default_sites"] == "miruro"
 
 
 def test_a_blanked_path_can_never_resolve_to_home(client, tmp_path):
@@ -260,7 +260,7 @@ def test_a_blanked_path_can_never_resolve_to_home(client, tmp_path):
 
 
 def test_default_sites_can_be_cleared(client, tmp_path):
-    path_id = db.add_custom_path("Movies", str(tmp_path), "megakino")
+    path_id = db.add_custom_path("Movies", str(tmp_path), "miruro")
     client.put(f"/api/custom-paths/{path_id}", json={"default_sites": []})
     assert db.get_custom_path(path_id)["default_sites"] == ""
 
@@ -416,10 +416,10 @@ def test_the_settings_can_be_downloaded_as_an_env_file(client):
 def test_the_export_holds_what_is_running(client):
     client.put(
         "/api/settings",
-        json={"enable_kinox": True, "ui_language": "de", "autosync_interval": "6h"},
+        json={"enable_miruro": True, "ui_language": "de", "autosync_interval": "6h"},
     )
     body = client.get("/api/settings/env").get_data(as_text=True)
-    assert "ANIWORLD_ENABLE_KINOX=1" in body
+    assert "ANIWORLD_ENABLE_MIRURO=1" in body
     assert "ANIWORLD_UI_LANGUAGE=de" in body
     assert "ANIWORLD_AUTOSYNC_INTERVAL=6h" in body
 
@@ -459,8 +459,8 @@ def test_the_export_reads_back_as_the_same_settings(client, tmp_path):
             "autosync_mode": "cron",
             "autosync_cron": "every monday and friday at 10pm",
             "output_format": "mp4",
-            "enable_htv": True,
-            "enable_megakino": False,
+            "enable_nineanime": True,
+            "enable_miruro": False,
         },
     )
     written = tmp_path / ".env"
@@ -468,8 +468,8 @@ def test_the_export_reads_back_as_the_same_settings(client, tmp_path):
     loaded = dotenv_values(written)
 
     assert loaded["ANIWORLD_AUTOSYNC_CRON"] == "0 22 * * 1,5", "quotes survive"
-    assert loaded["ANIWORLD_ENABLE_HTV"] == "1"
-    assert loaded["ANIWORLD_ENABLE_MEGAKINO"] == "0"
+    assert loaded["ANIWORLD_ENABLE_NINEANIME"] == "1"
+    assert loaded["ANIWORLD_ENABLE_MIRURO"] == "0"
     assert loaded["ANIWORLD_NAMING_TEMPLATE"].endswith(".mp4"), "spaces survive"
     assert loaded["ANIWORLD_UI_LANGUAGE"] == "en"
 
@@ -507,3 +507,41 @@ def test_the_path_preview_needs_an_admin():
     from aniworld.web.views import ADMIN_ENDPOINTS
 
     assert "api.path_preview" in ADMIN_ENDPOINTS
+
+
+# ---------------------------------------------------------------------------
+# Stream cache
+# ---------------------------------------------------------------------------
+def test_the_stream_cache_is_measured(client, downloads):
+    from aniworld.web import playback
+
+    directory = playback._stream_cache_dir()
+    directory.mkdir(parents=True)
+    (directory / "x.mp4").write_bytes(b"x" * 64)
+
+    body = client.get("/api/settings/stream-cache").get_json()
+    assert body["path"] == str(directory)
+    assert body["files"] == 1
+    assert body["bytes"] == 64
+
+
+def test_the_stream_cache_can_be_emptied(client, downloads):
+    from aniworld.web import playback
+
+    directory = playback._stream_cache_dir()
+    directory.mkdir(parents=True)
+    (directory / "x.mp4").write_bytes(b"x" * 64)
+
+    response = client.post("/api/settings/stream-cache/clear", json={})
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["ok"] is True
+    assert body["removed_bytes"] == 64
+    assert playback.cache_stats()["files"] == 0
+
+
+def test_stream_cache_endpoints_need_an_admin():
+    from aniworld.web.views import ADMIN_ENDPOINTS
+
+    assert "api.stream_cache" in ADMIN_ENDPOINTS
+    assert "api.clear_stream_cache" in ADMIN_ENDPOINTS

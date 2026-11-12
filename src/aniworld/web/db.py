@@ -187,6 +187,35 @@ _SCHEMA = (
     )
     """,
     "CREATE INDEX IF NOT EXISTS idx_api_key_hash ON api_keys (key_hash)",
+    """
+    CREATE TABLE IF NOT EXISTS playback_progress (
+        folder TEXT NOT NULL,
+        season TEXT NOT NULL,
+        episode INTEGER NOT NULL,
+        position INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (folder, season, episode)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS library_meta (
+        folder TEXT PRIMARY KEY,
+        anilist_id INTEGER,
+        title_en TEXT NOT NULL DEFAULT '',
+        title_romaji TEXT NOT NULL DEFAULT '',
+        cover TEXT NOT NULL DEFAULT '',
+        banner TEXT NOT NULL DEFAULT '',
+        genres TEXT NOT NULL DEFAULT '[]',
+        score REAL,
+        year INTEGER,
+        format TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT '',
+        episode_count INTEGER,
+        description TEXT NOT NULL DEFAULT '',
+        hidden INTEGER NOT NULL DEFAULT 0,
+        fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+    """,
 )
 
 # Columns added after the first release. Older databases get them via ALTER.
@@ -197,6 +226,7 @@ _MIGRATIONS = {
         "sso_issuer": "TEXT",
     },
     "custom_paths": {"default_sites": "TEXT NOT NULL DEFAULT ''"},
+    "library_meta": {"hidden": "INTEGER NOT NULL DEFAULT 0"},
     "download_queue": {
         "position": "INTEGER NOT NULL DEFAULT 0",
         "custom_path_id": "INTEGER",
@@ -926,3 +956,113 @@ def delete_api_key(key_id):
     with session() as conn:
         cur = conn.execute("DELETE FROM api_keys WHERE id = ?", (key_id,))
         return cur.rowcount > 0
+
+
+# ---------------------------------------------------------------------------
+# Library metadata cache (AniList)
+# ---------------------------------------------------------------------------
+def get_library_meta(folder):
+    """Cached AniList metadata for one library folder, or None."""
+    with session() as conn:
+        row = _row(conn, "SELECT * FROM library_meta WHERE folder = ?", (folder,))
+    if row is None:
+        return None
+    meta = dict(row)
+    meta["hidden"] = bool(meta.get("hidden"))
+    try:
+        meta["genres"] = json.loads(meta.get("genres") or "[]")
+        meta["fetched_at"] = meta.get("fetched_at")
+    except (TypeError, ValueError):
+        meta["genres"] = []
+    return meta
+
+
+def set_library_meta(folder, meta):
+    """Store (or replace) cached AniList metadata for one folder."""
+    with session() as conn:
+        conn.execute(
+            "INSERT INTO library_meta (folder, anilist_id, title_en, title_romaji, "
+            "cover, banner, genres, score, year, format, status, episode_count, "
+            "description, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')) "
+            "ON CONFLICT(folder) DO UPDATE SET anilist_id = excluded.anilist_id, "
+            "title_en = excluded.title_en, title_romaji = excluded.title_romaji, "
+            "cover = excluded.cover, banner = excluded.banner, genres = excluded.genres, "
+            "score = excluded.score, year = excluded.year, format = excluded.format, "
+            "status = excluded.status, episode_count = excluded.episode_count, "
+            "description = excluded.description, fetched_at = datetime('now')",
+            (
+                folder,
+                meta.get("anilist_id"),
+                meta.get("title_en") or "",
+                meta.get("title_romaji") or "",
+                meta.get("cover") or "",
+                meta.get("banner") or "",
+                json.dumps(meta.get("genres") or []),
+                meta.get("score"),
+                meta.get("year"),
+                meta.get("format") or "",
+                meta.get("status") or "",
+                meta.get("episodes"),
+                meta.get("description") or "",
+            ),
+        )
+
+
+def get_library_hidden():
+    """Folder names hidden from the library grid."""
+    with session() as conn:
+        rows = conn.execute(
+            "SELECT folder FROM library_meta WHERE hidden = 1"
+        ).fetchall()
+    return {row["folder"] for row in rows}
+
+
+def is_library_hidden(folder):
+    if not folder:
+        return False
+    with session() as conn:
+        row = _row(conn, "SELECT hidden FROM library_meta WHERE folder = ?", (folder,))
+    return bool(row and row.get("hidden"))
+
+
+def set_library_hidden(folder, hidden):
+    """Hide (or show) one library folder."""
+    with session() as conn:
+        conn.execute(
+            "INSERT INTO library_meta (folder, hidden) VALUES (?, ?) "
+            "ON CONFLICT(folder) DO UPDATE SET hidden = excluded.hidden",
+            (folder, 1 if hidden else 0),
+        )
+
+
+def delete_library_meta(folder):
+    with session() as conn:
+        conn.execute("DELETE FROM library_meta WHERE folder = ?", (folder,))
+
+
+def set_playback_position(folder, season, episode, position):
+    """Last watched position (seconds) for one library episode."""
+    with session() as conn:
+        conn.execute(
+            "INSERT INTO playback_progress (folder, season, episode, position) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(folder, season, episode) DO UPDATE SET position = excluded.position, "
+            "updated_at = datetime('now')",
+            (folder, str(season), int(episode), max(0, int(position))),
+        )
+
+
+def get_playback_positions(folder):
+    """{season: {episode: position}} for one library title."""
+    with session() as conn:
+        rows = conn.execute(
+            "SELECT season, episode, position FROM playback_progress WHERE folder = ?", (folder,)
+        ).fetchall()
+    positions = {}
+    for row in rows:
+        positions.setdefault(str(row["season"]), {})[str(row["episode"])] = row["position"]
+    return positions
+
+
+def delete_playback_positions(folder):
+    with session() as conn:
+        conn.execute("DELETE FROM playback_progress WHERE folder = ?", (folder,))

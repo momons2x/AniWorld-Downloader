@@ -8,8 +8,8 @@ from flask import Flask, jsonify, redirect, request, url_for
 from flask_wtf.csrf import CSRFProtect
 
 from ..logger import get_logger
-from . import apikeys, autosync, db, settings_store, theming, worker
-from .version import get_version
+from . import apikeys, db, settings_store, theming, worker
+from .version import get_static_version, get_version
 from .views import ADMIN_ENDPOINTS, register_blueprints
 
 logger = get_logger(__name__)
@@ -168,19 +168,18 @@ def create_app(auth_enabled=False, sso_enabled=False, force_sso=False):
             # Without auth everyone is effectively an admin
             "is_admin": (not auth_enabled) or bool(user and user["role"] == "admin"),
             "app_version": version,
+            "static_version": get_static_version(),
             "auth_enabled": auth_enabled,
             "current_user": user,
             "oidc_enabled": app.config.get("OIDC_ENABLED", False),
             "oidc_display_name": app.config.get("OIDC_DISPLAY_NAME", "SSO"),
             "force_sso": app.config.get("FORCE_SSO", False),
-            "ui_language": settings_store.ui_language(),
             # empty when no theme is stored, which is what hides the link
             "custom_css_version": theming.version(),
             "custom_shader_version": theming.shader_version(),
             # themes hang off body[data-page], so it has to name the page
             "page_name": (request.endpoint or "").rsplit(".", 1)[-1],
             "library_enabled": settings_store.library_enabled(),
-            "autosync_enabled": settings_store.autosync_enabled(),
             "github_url": "https://github.com/phoenixthrush/AniWorld-Downloader",
         }
 
@@ -231,7 +230,6 @@ def _start_background_services():
 
     _wire_captcha_hooks()
     worker.ensure_started()
-    autosync.ensure_started()
     try:
         from .discord_bot import start_if_enabled
 
@@ -266,6 +264,26 @@ def _proxy_options():
     }
 
 
+def _install_shutdown_hooks(playback):
+    """Stop playback ffmpeg children when the server exits or gets SIGTERM."""
+    import atexit
+    import signal
+    import threading
+
+    atexit.register(playback.shutdown)
+    if threading.current_thread() is not threading.main_thread():
+        return
+
+    def _handle_term(signum, _frame):
+        playback.shutdown()
+        raise SystemExit(128 + signum)
+
+    try:
+        signal.signal(signal.SIGTERM, _handle_term)
+    except (AttributeError, OSError, ValueError):
+        pass
+
+
 def start_web_ui(
     host="127.0.0.1",
     port=DEFAULT_PORT,
@@ -277,6 +295,8 @@ def start_web_ui(
     import threading
     import webbrowser
 
+    from . import playback
+
     # Env overrides keep Docker deployments configurable without CLI flags
     force_sso = force_sso or os.getenv("ANIWORLD_WEB_FORCE_SSO", "0") == "1"
     sso_enabled = sso_enabled or force_sso or os.getenv("ANIWORLD_WEB_SSO", "0") == "1"
@@ -287,6 +307,7 @@ def start_web_ui(
     app = create_app(
         auth_enabled=auth_enabled, sso_enabled=sso_enabled, force_sso=force_sso
     )
+    _install_shutdown_hooks(playback)
 
     display_host = "localhost" if host == "127.0.0.1" else host
     url = f"http://{display_host}:{port}"
@@ -298,9 +319,15 @@ def start_web_ui(
     if open_browser and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
         threading.Timer(0.5, webbrowser.open, args=(url,)).start()
 
-    if debug:
-        app.run(host=host, port=port, debug=True)
-    else:
-        from waitress import serve
+    try:
+        if debug:
+            app.run(host=host, port=port, debug=True)
+        else:
+            from waitress import serve
 
-        serve(app, host=host, port=port, **_proxy_options())
+            # Video streams and library browsing share the pool, and an open
+            # <video> can hold a thread for the length of an episode, so the
+            # default of four is far too small here.
+            serve(app, host=host, port=port, threads=20, **_proxy_options())
+    finally:
+        playback.shutdown()

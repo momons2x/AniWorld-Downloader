@@ -30,8 +30,8 @@ try:
 except Exception:  # optional dependency
     DISCORD_AVAILABLE = False
 
-MOVIE_LANGUAGES = ("German Dub", "English Dub")
-SERIES_LANGUAGES = ("German Dub", "English Dub", "English Sub", "German Sub")
+MOVIE_LANGUAGES = ("English Dub", "English Sub")
+SERIES_LANGUAGES = ("English Dub", "English Sub")
 
 # How long a request's dropdown stays usable.
 VIEW_TIMEOUT = 300
@@ -77,53 +77,7 @@ TRANSLATIONS = {
         "available_desc": "**{title}** ({language}) has finished downloading and is now available.",
         "type_movie": "Movie",
         "type_series": "Series",
-        "lang_german": "German",
         "lang_english": "English",
-        "qual_dub": "Dub",
-        "qual_sub": "Sub",
-    },
-    "de": {
-        "cmd_movie": "film-anfrage",
-        "cmd_movie_desc": "Einen Film anfragen",
-        "cmd_series": "serien-anfrage",
-        "cmd_series_desc": "Eine Serie anfragen",
-        "arg_movie_title": "Filmtitel",
-        "arg_series_title": "Serientitel",
-        "no_permission": "Du hast keine Berechtigung, etwas anzufragen.",
-        "search_failed": "Suche fehlgeschlagen: {error}",
-        "no_results": "Keine Ergebnisse für **{title}** gefunden.",
-        "results_for": "Ergebnisse für **{title}**:",
-        "pick_title": "Wähle den genauen Titel",
-        "language_ph": "Sprache",
-        "choose_language": "**{title}** - wähle eine Sprache:",
-        "queued": "✅ **{title}** ({language}) wurde zur Download-Warteschlange hinzugefügt.",
-        "queue_failed": "❌ **{title}** konnte nicht eingereiht werden: {error}",
-        "no_owner": "⚠️ Es ist kein Owner konfiguriert, daher kann die Anfrage nicht weitergeleitet werden.",
-        "sent_for_approval": "\U0001f4e8 Deine Anfrage für **{title}** wurde zur Freigabe gesendet.",
-        "owner_unreachable": "⚠️ Der Owner konnte per DM nicht erreicht werden.",
-        "req_title": "Neue Download-Anfrage",
-        "f_type": "Typ",
-        "f_language": "Sprache",
-        "f_site": "Seite",
-        "f_requested_by": "Angefragt von",
-        "f_url": "URL",
-        "btn_accept": "Annehmen",
-        "btn_decline": "Ablehnen",
-        "accepted_owner": "✅ Angenommen - **{title}** wird heruntergeladen.",
-        "accepted_dm": "✅ Deine Anfrage **{title}** wurde angenommen und wird heruntergeladen.",
-        "decline_title": "Anfrage ablehnen",
-        "decline_reason": "Grund (optional)",
-        "declined_owner": "\U0001f6ab **{title}** abgelehnt.",
-        "declined_dm": "\U0001f6ab Deine Anfrage **{title}** wurde abgelehnt.",
-        "declined_reason": "Grund: {reason}",
-        "queue_failed_short": "❌ Einreihen fehlgeschlagen: {error}",
-        "available_dm": "✅ Deine Anfrage **{title}** ist fertig heruntergeladen und jetzt verfügbar.",
-        "available_title": "{title} ist jetzt verfügbar!",
-        "available_desc": "**{title}** ({language}) wurde fertig heruntergeladen und ist jetzt verfügbar.",
-        "type_movie": "Film",
-        "type_series": "Serie",
-        "lang_german": "Deutsch",
-        "lang_english": "Englisch",
         "qual_dub": "Dub",
         "qual_sub": "Sub",
     },
@@ -131,10 +85,7 @@ TRANSLATIONS = {
 
 
 def t(config, key, **kwargs):
-    language = (config or {}).get("language", "en")
-    if language not in TRANSLATIONS:
-        language = "en"
-    text = TRANSLATIONS[language].get(key) or TRANSLATIONS["en"].get(key, key)
+    text = TRANSLATIONS["en"].get(key, key)
     if not kwargs:
         return text
     try:
@@ -145,7 +96,7 @@ def t(config, key, **kwargs):
 
 def _language_label(config, value, media_type):
     """Movies only ever come as a dub, so drop the qualifier there."""
-    name = t(config, "lang_german" if value.startswith("German") else "lang_english")
+    name = t(config, "lang_english")
     if media_type == "movie":
         return name
     return f"{name} ({t(config, 'qual_dub' if value.endswith('Dub') else 'qual_sub')})"
@@ -174,7 +125,6 @@ def read_config():
         "mode": os.environ.get("ANIWORLD_DISCORD_MODE", "standard").strip().lower(),
         "role_id": os.environ.get("ANIWORLD_DISCORD_REQUEST_ROLE_ID", "").strip(),
         "guild_id": os.environ.get("ANIWORLD_DISCORD_GUILD_ID", "").strip(),
-        "language": os.environ.get("ANIWORLD_DISCORD_LANGUAGE", "en").strip().lower(),
         "announce_channel_id": os.environ.get(
             "ANIWORLD_DISCORD_ANNOUNCE_CHANNEL_ID", ""
         ).strip(),

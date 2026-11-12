@@ -350,7 +350,7 @@ def test_a_temp_file_with_the_marker_mid_name_is_not_shown_as_a_movie(downloads)
 def test_a_series_only_folder_is_classified_as_series(episode_file):
     episode_file("Naruto", 1, 1)
     titles = library.list_titles_with_meta()
-    assert titles == [{"folder": "Naruto", "categories": ["series"]}]
+    assert titles == [{"folder": "Naruto", "title": "Naruto", "poster_url": "", "year": None, "score": None, "genres": [], "categories": ["series"], "hidden": False}]
 
 
 def test_a_movie_only_folder_is_classified_as_movies(downloads):
@@ -358,14 +358,14 @@ def test_a_movie_only_folder_is_classified_as_movies(downloads):
     folder.mkdir()
     (folder / "Your Name.mkv").write_bytes(b"x")
     titles = library.list_titles_with_meta()
-    assert titles == [{"folder": "Your Name", "categories": ["movies"]}]
+    assert titles == [{"folder": "Your Name", "title": "Your Name", "poster_url": "", "year": None, "score": None, "genres": [], "categories": ["movies"], "hidden": False}]
 
 
 def test_a_folder_with_both_is_classified_as_both(episode_file, downloads):
     episode_file("Naruto", 1, 1)
     (downloads / "Naruto" / "Naruto The Movie.mkv").write_bytes(b"x")
     titles = library.list_titles_with_meta()
-    assert titles == [{"folder": "Naruto", "categories": ["series", "movies"]}]
+    assert titles == [{"folder": "Naruto", "title": "Naruto", "poster_url": "", "year": None, "score": None, "genres": [], "categories": ["series", "movies"], "hidden": False}]
 
 
 def test_an_in_progress_movie_download_is_still_classified_as_a_movie(downloads):
@@ -373,13 +373,13 @@ def test_an_in_progress_movie_download_is_still_classified_as_a_movie(downloads)
     folder.mkdir()
     (folder / "Some Film (2026).temp_full.mkv").write_bytes(b"x")
     titles = library.list_titles_with_meta()
-    assert titles == [{"folder": "Some Film", "categories": ["movies"]}]
+    assert titles == [{"folder": "Some Film", "title": "Some Film", "poster_url": "", "year": None, "score": None, "genres": [], "categories": ["movies"], "hidden": False}]
 
 
 def test_an_empty_folder_falls_back_to_series(downloads):
     (downloads / "Empty Show").mkdir()
     titles = library.list_titles_with_meta()
-    assert titles == [{"folder": "Empty Show", "categories": ["series"]}]
+    assert titles == [{"folder": "Empty Show", "title": "Empty Show", "poster_url": "", "year": None, "score": None, "genres": [], "categories": ["series"], "hidden": False}]
 
 
 # ---------------------------------------------------------------------------
@@ -391,3 +391,115 @@ def test_a_temp_episode_with_the_marker_mid_name_is_not_shown(downloads):
     (folder / "Naruto S01E001.temp_full.mkv").write_bytes(b"x")
     result = library.read_title("Naruto")
     assert result["seasons"] == {}
+
+
+# ---------------------------------------------------------------------------
+# Playback path resolution
+# ---------------------------------------------------------------------------
+def test_find_video_for_a_series_episode(episode_file):
+    episode_file("Naruto", 1, 7)
+    path, ext = library.find_video("Naruto", 1, 7)
+    assert path.name == "Naruto S01E007.mkv"
+    assert ext == ".mkv"
+
+
+def test_find_video_for_a_movie(downloads):
+    folder = downloads / "Your Name"
+    folder.mkdir()
+    (folder / "Your Name.mkv").write_bytes(b"x")
+    path, ext = library.find_video("Your Name", "movie", 1)
+    assert path.name == "Your Name.mkv"
+    assert ext == ".mkv"
+
+
+def test_find_video_missing_is_an_error(episode_file):
+    episode_file("Naruto", 1, 1)
+    with pytest.raises(library.LibraryError):
+        library.find_video("Naruto", 1, 2)
+    with pytest.raises(library.LibraryError):
+        library.find_video("Naruto", 9, 1)
+
+
+def test_find_video_missing_title_is_an_error():
+    with pytest.raises(library.LibraryError):
+        library.find_video("Nope", 1, 1)
+
+
+# ---------------------------------------------------------------------------
+# Playback tokens and transcoding arguments
+# ---------------------------------------------------------------------------
+def test_playback_token_round_trips(episode_file, monkeypatch):
+    episode_file("Naruto", 1, 1)
+    from aniworld.web import playback
+
+    monkeypatch.setattr(playback, "_ffmpeg_executable", lambda: "ffmpeg")
+    src, _ext = library.find_video("Naruto", 1, 1)
+    token = playback.register(src, source_path=src)
+    path, _source_path, label = playback.resolve(token)
+    assert path == src
+    assert label == src.name
+
+
+def test_playback_token_expires(monkeypatch):
+    from aniworld.web import playback
+
+    token = playback.register("x.mp4", source_path="x.mp4")
+    with playback._sessions_lock:
+        playback._sessions[token] = ("x.mp4", "x.mp4", 0)
+    with pytest.raises(library.LibraryError) as exc:
+        playback.resolve(token)
+    assert "expired" in str(exc.value)
+
+
+def test_playback_token_unknown_is_an_error():
+    from aniworld.web import playback
+
+    with pytest.raises(library.LibraryError):
+        playback.resolve("nope")
+
+
+def test_transcode_command_browser_friendly(monkeypatch):
+    from aniworld.web import playback
+
+    monkeypatch.setattr(playback, "_ffmpeg_executable", lambda: "ffmpeg")
+    monkeypatch.setattr(playback.media, "detect_encoder", lambda *a, **k: "libx264")
+    cmd = playback.transcode_command("in.mkv", "out.mp4", ".mkv")
+    text = " ".join(cmd)
+    assert "libx264" in text
+    assert "-crf" in cmd
+    assert "mov_text" not in cmd
+    assert "-sn" in cmd
+    assert "empty_moov" in text
+    assert "frag_keyframe" in text
+    assert cmd[-1] == "out.mp4"
+
+
+def test_hidden_titles_are_excluded_and_can_be_shown(episode_file):
+    episode_file("Naruto", 1, 1)
+    episode_file("Secret", 1, 1)
+    assert library.set_hidden("Secret", True) is True
+    titles = library.list_titles_with_meta()
+    assert [title["folder"] for title in titles] == ["Naruto"]
+    assert titles[0]["hidden"] is False
+    shown = library.list_titles_with_meta(include_hidden=True)
+    assert shown == [
+        {"folder": "Naruto", "title": "Naruto", "poster_url": "", "year": None, "score": None, "genres": [], "categories": ["series"], "hidden": False},
+        {"folder": "Secret", "title": "Secret", "poster_url": "", "year": None, "score": None, "genres": [], "categories": ["series"], "hidden": True},
+    ]
+    assert library.set_hidden("Secret", False) is False
+    assert [title["folder"] for title in library.list_titles_with_meta()] == [
+        "Naruto",
+        "Secret",
+    ]
+
+
+def test_set_hidden_requires_an_existing_title(downloads):
+    with pytest.raises(library.LibraryError):
+        library.set_hidden("Nope", True)
+
+
+def test_deleting_a_title_clears_its_hidden_flag(episode_file):
+    episode_file("Naruto", 1, 1)
+    library.set_hidden("Naruto", True)
+    library.delete("Naruto")
+    assert not db.is_library_hidden("Naruto")

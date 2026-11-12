@@ -4,7 +4,6 @@ from flask import Response, current_app, jsonify, request
 
 from ...logger import get_logger
 from .. import db, worker
-from ..media import SELF_HOSTED_LANGUAGES, mangafire_format
 from ..settings_store import english_sub_disabled
 
 logger = get_logger(__name__)
@@ -49,18 +48,10 @@ def start_download():
     if not episodes:
         return jsonify({"error": "episodes list is required"}), 400
 
-    language = data.get("language", "German Dub")
+    language = data.get("language", "English Sub")
     provider = data.get("provider", "VOE")
-    # Self-hosted sites only carry English Sub, the setting would lock them out
-    if (
-        language == "English Sub"
-        and provider not in SELF_HOSTED_LANGUAGES
-        and english_sub_disabled()
-    ):
+    if language == "English Sub" and english_sub_disabled():
         return jsonify({"error": "English Sub downloads are disabled"}), 403
-
-    if provider == "MangaFire":
-        episodes = _tag_mangafire(episodes, data.get("mangafire_format"))
 
     queue_id = db.add_to_queue(
         title=data.get("title", "Unknown"),
@@ -73,18 +64,6 @@ def start_download():
     )
     worker.ensure_started()
     return jsonify({"queue_id": queue_id})
-
-
-def _tag_mangafire(episodes, requested_format):
-    """MangaFire needs the output format stored per queued chapter or volume."""
-    output = requested_format or mangafire_format()
-    tagged = []
-    for entry in episodes:
-        if isinstance(entry, dict):
-            tagged.append({**entry, "mangafire_format": output})
-        else:
-            tagged.append({"url": entry, "mangafire_format": output})
-    return tagged
 
 
 # What ?status= accepts: a real status, or one of the two groups.

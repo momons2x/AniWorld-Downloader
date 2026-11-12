@@ -133,8 +133,6 @@
   --site-filmo-shadow: 0 2px 8px rgba(217, 70, 239, 0.35);
   --site-mangafire-bg: linear-gradient(135deg, #f59e0b, #b45309);
   --site-mangafire-shadow: 0 2px 8px rgba(245, 158, 11, 0.35);
-  --site-htv-bg: linear-gradient(135deg, #ff4fa3, #db2777);
-  --site-htv-shadow: 0 2px 8px rgba(255, 79, 163, 0.35);
 
   /* Language badges on the episode rows */
   --badge-german-dub-border: rgba(37, 99, 235, 0.35);
@@ -145,12 +143,27 @@
   --badge-english-dub-text: #86efac;
   --badge-english-sub-border: rgba(245, 158, 11, 0.35);
   --badge-english-sub-text: #fcd34d;
+  --badge-indonesian-sub-border: rgba(239, 68, 68, 0.35);
+  --badge-indonesian-sub-text: #fca5a5;
 
   /* Notice banner on the settings page */
   --notice-bg: rgba(245, 158, 11, 0.08);
   --notice-border: rgba(245, 158, 11, 0.25);
   --notice-text: #fcd34d;
   --notice-code-text: #fde68a;
+
+  /* Library media cards + player overlay */
+  --lib-thumb-bg: #14161c;
+  --lib-thumb-letter: rgba(255, 255, 255, 0.75);
+  --lib-score-bg: rgba(0, 0, 0, 0.75);
+  --lib-score-text: #fcd34d;
+  --lib-banner-border: rgba(255, 255, 255, 0.08);
+  --play-bg: rgba(99, 102, 241, 0.25);
+  --play-bg-hover: rgba(99, 102, 241, 0.5);
+  --play-border: rgba(255, 255, 255, 0.15);
+  --play-text: #fff;
+  --player-status-text: #fcd34d;
+  --watch-hero-overlay: rgba(10, 10, 16, 0.92);
 
   /* Odds and ends */
   --badge-downloaded-bg: rgba(34, 197, 94, 0.9);
@@ -709,11 +722,6 @@ body[data-site="mangafire"] {
   --active-site-shadow: var(--site-all-shadow, var(--site-mangafire-shadow));
 }
 
-body[data-site="htv"] {
-  --active-site-bg: var(--site-all-bg, var(--site-htv-bg));
-  --active-site-shadow: var(--site-all-shadow, var(--site-htv-shadow));
-}
-
 .segmented {
   display: flex;
   justify-content: center;
@@ -955,6 +963,11 @@ body[data-site="htv"] {
 }
 
 /* ===== Modal ===== */
+/* Background stays put while a dialog is up; the dialog itself scrolls. */
+body[data-modal="open"] {
+  overflow: hidden;
+}
+
 .overlay {
   display: none;
   position: fixed;
@@ -964,6 +977,10 @@ body[data-site="htv"] {
   z-index: 100;
   padding: 24px;
   overflow-y: auto;
+}
+
+.overlay[hidden] {
+  display: none !important;
 }
 
 .overlay.open {
@@ -982,6 +999,11 @@ body[data-site="htv"] {
   width: 100%;
   padding: 28px;
   box-shadow: var(--shadow-modal);
+}
+
+/* Focused only to hold screen-reader focus inside the dialog, not to show a ring */
+.modal:focus {
+  outline: none;
 }
 
 .modal-narrow {
@@ -1356,6 +1378,11 @@ body[data-site="htv"] {
 .badge-english-sub {
   border-color: var(--badge-english-sub-border);
   color: var(--badge-english-sub-text);
+}
+
+.badge-indonesian-sub {
+  border-color: var(--badge-indonesian-sub-border);
+  color: var(--badge-indonesian-sub-text);
 }
 
 .accordion-message {
@@ -2780,6 +2807,10 @@ details.advanced summary:hover {
   .poster-card img {
     height: 220px;
   }
+
+  .lib-card-placeholder {
+    height: 220px;
+  }
 }
 
 /* ===== Auto-Sync page ===== */
@@ -2895,3 +2926,517 @@ details.advanced summary:hover {
   margin-left: 6px;
   text-transform: uppercase;
 }
+
+/* ===== Library media cards + player overlay ===== */
+.lib-thumb {
+  position: relative;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 54px;
+  border-radius: 6px;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--border-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.lib-thumb.has-cover { background-color: var(--lib-thumb-bg); }
+.lib-thumb-letter {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--lib-thumb-letter);
+}
+.lib-score {
+  position: absolute;
+  left: 2px;
+  bottom: 2px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--lib-score-bg);
+  color: var(--lib-score-text);
+}
+.lib-metaline {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.lib-banner {
+  height: 110px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center 30%;
+  margin: 6px 0 10px;
+  border: 1px solid var(--lib-banner-border);
+}
+.play-btn {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--play-border);
+  background: var(--play-bg);
+  color: var(--play-text);
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.play-btn:hover { background: var(--play-bg-hover); }
+.player-overlay { display: flex; align-items: center; justify-content: center; }
+.player-modal { width: min(880px, 94vw); position: relative; }
+.player-meta { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+.player-title { font-size: 1.05rem; font-weight: 700; }
+.player-source { font-size: 0.75rem; color: var(--text-muted); word-break: break-all; }
+.player-status { padding: 10px; color: var(--player-status-text); font-size: 0.85rem; }
+.player-video { width: 100%; border-radius: 10px; background: var(--lib-thumb-bg); aspect-ratio: 16/9; }
+
+/* ===== Library cards (home-page style) ===== */
+.lib-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  margin: 16px 4px 10px;
+}
+.lib-card { width: 180px; }
+.lib-card.playing { border-color: var(--card-hover-border); }
+.lib-card img { width: 100%; height: 250px; object-fit: cover; background: var(--surface-poster); display: block; }
+/* The whole card is one link; the hide button sits outside it. */
+.lib-card-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+.lib-card-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.lib-poster { position: relative; }
+.lib-card-placeholder {
+  width: 100%;
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-poster);
+  font-size: 2.6rem;
+}
+.empty-state-action {
+  display: block;
+  margin: 14px auto 0;
+}
+.library-load-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+  font-size: 0.88rem;
+  text-align: center;
+}
+.lib-card-play {
+  position: absolute;
+  left: 50%;
+  top: 110px;
+  transform: translate(-50%, -50%) scale(0.6);
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--play-bg-hover);
+  color: var(--play-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+}
+.lib-card:hover .lib-card-play { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.page-head-actions { display: flex; align-items: center; gap: 10px; }
+.lib-show-hidden {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.lib-hide-btn {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  z-index: 2;
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 2px 7px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+.lib-hide-btn:disabled { opacity: 0.6; cursor: wait; }
+.lib-card.is-hidden { opacity: 0.75; }
+.lib-card.is-hidden .lib-card-play { display: none; }
+.lib-hidden-cover {
+  width: 100%;
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-poster);
+  font-size: 3.8rem;
+}
+.my-anime-mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+.my-anime-mode[hidden] { display: none; }
+.my-anime-mode .genre-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.discover-controls {
+  max-width: 960px;
+  margin: 4px auto 22px;
+  padding: 16px 20px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.discover-controls[hidden] { display: none; }
+.discover-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.discover-label {
+  flex: 0 0 48px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding-top: 5px;
+  line-height: 1.2;
+}
+.discover-controls .genre-list { justify-content: flex-start; }
+.discover-kinds { flex: 1 1 auto; }
+.discover-genre-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px 14px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+}
+.discover-genre-bar[hidden] { display: none; }
+.discover-controls .discover-genres {
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 2px;
+  scrollbar-width: thin;
+}
+.discover-genres .genre-chip {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  padding: 5px 12px;
+}
+body.discover-mode #genreBar { display: none !important; }
+.discover-modal .series-header { align-items: flex-start; }
+.discover-modal .control-row { flex-direction: column; align-items: stretch; gap: 6px; }
+.lib-card-score {
+  position: absolute;
+  right: 6px;
+  bottom: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--lib-score-bg);
+  color: var(--lib-score-text);
+}
+.lib-card-detail {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px;
+  margin-top: 12px;
+}
+.lib-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.lib-actions-hint { font-size: 0.75rem; color: var(--text-muted); }
+.lib-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 8px 0;
+}
+.library-season-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  border-bottom: 1px solid var(--border-soft);
+}
+.lib-card-detail .library-children {
+  border-top: none;
+}
+.lib-card-detail .library-episode {
+  padding-left: 14px;
+}
+
+/* ===== Watch page ===== */
+.watch-container { max-width: 1400px; }
+.watch-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 4px 0 14px;
+}
+.watch-crumbs a { color: var(--text-muted); text-decoration: none; }
+.watch-crumbs a:hover { color: var(--text-bright); }
+.watch-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 1000px) {
+  .watch-layout { grid-template-columns: 1fr; }
+}
+.watch-player-wrap { position: relative; }
+.watch-cancel { margin-top: 8px; }
+/* Retry action inside the status pill over the player */
+.watch-retry {
+  display: inline-flex;
+  margin-left: 10px;
+  padding: 2px 10px;
+  font-size: 0.78rem;
+}
+.watch-video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--lib-thumb-bg);
+  border-radius: var(--radius);
+  display: block;
+  object-fit: contain;
+}
+.watch-player-wrap .player-status {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-modal);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.watch-tracks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+}
+.watch-track-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.watch-track-field select {
+  max-width: 260px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-subtle);
+  color: var(--text-bright);
+}
+.watch-info { margin-top: 14px; }
+.watch-hero {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--lib-banner-border);
+  background-size: cover;
+  background-position: center;
+}
+.watch-cover {
+  width: 110px;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex: none;
+  background: var(--surface-poster);
+}
+.watch-info-text {
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--watch-hero-overlay);
+}
+.watch-info-text h1 {
+  font-size: 1.15rem;
+  color: var(--text-bright);
+  margin: 0 0 6px;
+  word-break: break-word;
+}
+.watch-meta { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; }
+.watch-desc {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  max-width: 70ch;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.watch-actions { margin-bottom: 0; }
+.watch-autonext {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.watch-side {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px;
+  max-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 80px;
+}
+.watch-side-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.watch-side-head h2 {
+  font-size: 0.95rem;
+  color: var(--text-bright);
+  margin: 0;
+}
+.watch-season {
+  font-size: 0.75rem;
+  background: var(--surface-input);
+  color: var(--text-bright);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+.watch-count {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.watch-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  font-size: 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-input);
+  color: var(--text-bright);
+  margin-bottom: 10px;
+}
+.watch-search:focus {
+  outline: none;
+  background: var(--surface-input-focus);
+  border-color: var(--card-hover-border);
+}
+.watch-episodes {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.watch-season-head {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 8px 2px 6px;
+}
+.watch-ep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.watch-ep:hover { background: var(--surface-subtle); }
+.watch-ep.active {
+  background: var(--play-bg);
+  border-color: var(--play-border);
+}
+.watch-ep-thumb {
+  width: 46px;
+  height: 30px;
+  flex: none;
+  border-radius: 5px;
+  background: var(--lib-thumb-bg);
+  color: var(--play-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+}
+.watch-ep-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.watch-ep-num {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.watch-ep.active .watch-ep-num { color: var(--text-bright); }
+.watch-ep-file {
+  font-size: 0.78rem;
+  color: var(--text-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.watch-ep-size {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.watch-ep-delete { flex: none; }

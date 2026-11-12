@@ -1,7 +1,6 @@
 """Startup settings stay discoverable and survive template updates."""
 
 import ast
-import os
 import re
 from pathlib import Path
 from unittest.mock import Mock
@@ -102,30 +101,17 @@ def test_template_covers_application_settings(monkeypatch, default_encoding):
     assert used == settings
 
 
-def test_mangafire_format_migrates_without_overriding_process_env(
-    tmp_path, monkeypatch
-):
+def test_merge_keeps_existing_values_over_template_defaults(tmp_path, monkeypatch):
     example = tmp_path / "example"
-    example.write_text("ANIWORLD_MANGAFIRE_FORMAT=jpg\n")
+    example.write_text("ANIWORLD_UI_LANGUAGE=en\n")
     env = tmp_path / ".env"
-    env.write_text("MANGAFIRE_FORMAT=cbz\n")
-    monkeypatch.setenv("ANIWORLD_MANGAFIRE_FORMAT", "jpg")
+    env.write_text("ANIWORLD_UI_LANGUAGE=de\n")
+    monkeypatch.delenv("ANIWORLD_UI_LANGUAGE", raising=False)
     merge_env(example, env)
-    assert dotenv_values(env) == {"ANIWORLD_MANGAFIRE_FORMAT": "cbz"}
-    assert os.environ["ANIWORLD_MANGAFIRE_FORMAT"] == "jpg"
+    assert dotenv_values(env) == {"ANIWORLD_UI_LANGUAGE": "de"}
 
 
-def test_explicit_new_format_wins_during_migration(tmp_path, monkeypatch):
-    example = tmp_path / "example"
-    example.write_text("ANIWORLD_MANGAFIRE_FORMAT=jpg\n")
-    env = tmp_path / ".env"
-    env.write_text("MANGAFIRE_FORMAT=cbz\nANIWORLD_MANGAFIRE_FORMAT=jpg\n")
-    monkeypatch.delenv("ANIWORLD_MANGAFIRE_FORMAT", raising=False)
-    merge_env(example, env)
-    assert dotenv_values(env) == {"ANIWORLD_MANGAFIRE_FORMAT": "jpg"}
-
-
-def test_cli_and_filmo_settings_survive_startup(tmp_path, monkeypatch):
+def test_cli_and_other_settings_survive_startup(tmp_path, monkeypatch):
     example = SOURCE / ".env.example"
     for key in dotenv_values(example):
         monkeypatch.delenv(key, raising=False)
@@ -134,7 +120,7 @@ def test_cli_and_filmo_settings_survive_startup(tmp_path, monkeypatch):
         "ANIWORLD_NO_MENU": "1",
         "ANIWORLD_MENU_DOWNLOAD_ONLY": "1",
         "ANIWORLD_KEEP_WATCHING": "1",
-        "ANIWORLD_ENABLE_FILMO": "0",
+        "ANIWORLD_ENABLE_NINEANIME": "0",
     }
     env.write_text("".join(f"{key}={value}\n" for key, value in values.items()))
     merge_env(example, env)

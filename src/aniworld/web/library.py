@@ -217,10 +217,43 @@ def read_title(folder, custom_path_id=None, lang_folder=None):
 
     return {
         "folder": folder,
+        "hidden": db.is_library_hidden(folder),
+        "positions": db.get_playback_positions(folder),
         "seasons": seasons,
         "total_episodes": total_episodes,
         "total_size": total_size,
     }
+
+
+def find_video(folder, season, episode, custom_path_id=None, lang_folder=None):
+    """Resolve one video file inside a title, for playback.
+
+    Mirrors the layout read_title() exposes: numbered seasons use the
+    SxxExx filename pattern, "movie" season uses the unpatterned files in
+    order. Returns (Path, suffix) or raises LibraryError.
+    """
+    base = _resolve_base(custom_path_id, lang_folder)
+    target = _safe_child(base, folder)
+    if target is None or not target.is_dir():
+        raise LibraryError("Title not found")
+
+    if str(season) == "movie":
+        movie_files = _movie_files(target)
+        index = int(episode) - 1
+        if index < 0 or index >= len(movie_files):
+            raise LibraryError("Video not found")
+        return movie_files[index], movie_files[index].suffix.lower()
+
+    wanted = int(episode)
+    wanted_season = int(season)
+    for file in target.rglob("*"):
+        if not file.is_file() or ".temp_" in file.name:
+            continue
+        match = EPISODE_RE.search(file.name)
+        if match and int(match.group(1)) == wanted_season and int(match.group(2)) == wanted:
+            return file, file.suffix.lower()
+
+    raise LibraryError("Video not found")
 
 
 def _safe_child(base, folder):
@@ -247,6 +280,8 @@ def delete(folder, season=None, episode=None, custom_path_id=None, lang_folder=N
 
     if season is None:
         shutil.rmtree(target, ignore_errors=True)
+        db.delete_library_meta(folder)
+        db.delete_playback_positions(folder)
         return 1
 
     if str(season) == "movie":
@@ -304,7 +339,18 @@ def _prune_empty(root):
         pass
 
 
-def list_titles_with_meta(custom_path_id=None, lang_folder=None):
+def set_hidden(folder, hidden, custom_path_id=None, lang_folder=None):
+    """Hide (or show) one library folder without touching its files."""
+    base = _resolve_base(custom_path_id, lang_folder)
+    target = _safe_child(base, folder)
+    if target is None or not target.is_dir():
+        raise LibraryError("Title not found")
+    hidden = bool(hidden)
+    db.set_library_hidden(folder, hidden)
+    return hidden
+
+
+def list_titles_with_meta(custom_path_id=None, lang_folder=None, include_hidden=False):
     """Titles plus which of "series"/"movies" each one belongs to.
 
     A title can be both (e.g. a series with a bonus film in the same
@@ -312,9 +358,13 @@ def list_titles_with_meta(custom_path_id=None, lang_folder=None):
     """
     base = _resolve_base(custom_path_id, lang_folder)
     titles = list_titles(custom_path_id, lang_folder)
+    hidden_names = db.get_library_hidden()
 
     result = []
     for folder in titles:
+        hidden = folder in hidden_names
+        if hidden and not include_hidden:
+            continue
         target = _safe_child(base, folder)
         has_series, has_movies = classify_title(target) if target else (True, False)
         categories = [
@@ -322,7 +372,20 @@ def list_titles_with_meta(custom_path_id=None, lang_folder=None):
         ]
         if not categories:
             categories = ["series"]
-        result.append({"folder": folder, "categories": categories})
+        cached = db.get_library_meta(folder) or {}
+        display_title = cached.get("title_en") or cached.get("title_romaji") or folder
+        result.append(
+            {
+                "folder": folder,
+                "title": display_title,
+                "poster_url": cached.get("cover") or "",
+                "year": cached.get("year"),
+                "score": cached.get("score"),
+                "genres": cached.get("genres") or [],
+                "categories": categories,
+                "hidden": hidden,
+            }
+        )
     return result
 
 

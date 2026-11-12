@@ -226,147 +226,44 @@
             <label class="site-row">
               <span class="site-row-text">
                 <span class="site-row-top">
-                  <span class="site-row-name">SerienStream</span>
-                  <span class="site-row-kind" data-i18n="settings.kind.series">Series</span>
+                  <span class="site-row-name">9anime</span>
+                  <span class="site-row-kind" data-i18n="settings.kind.anime">Anime</span>
                 </span>
-                <span class="site-row-hint" data-i18n="settings.enable_sto_hint">
-                  Series. The other site this app is built around.
+                <span class="site-row-hint" data-i18n="settings.enable_nineanime_hint">
+                  Anime with English subtitles or dubs, streamed from the site's
+                  player and downloaded as MKV.
                 </span>
               </span>
-              <input type="checkbox" class="site-switch" id="enableSerienStream" data-setting="enable_sto"
-                data-reload="1" role="switch" aria-label="SerienStream" />
+              <input type="checkbox" class="site-switch" id="enableNineanime" data-setting="enable_nineanime"
+                data-reload="1" role="switch" aria-label="9anime" />
             </label>
             <label class="site-row">
               <span class="site-row-text">
                 <span class="site-row-top">
-                  <span class="site-row-name">BurningSeries</span>
-                  <span class="site-row-kind" data-i18n="settings.kind.series">Series</span>
+                  <span class="site-row-name">Miruro</span>
+                  <span class="site-row-kind" data-i18n="settings.kind.anime">Anime</span>
                 </span>
-                <span class="site-row-hint" data-i18n="settings.enable_burningseries_hint">
-                  Series. Off by default: getting in depends on your region, and a Google reCAPTCHA we
-                  cannot solve for you stands in front of it.
+                <span class="site-row-hint" data-i18n="settings.enable_miruro_hint">
+                  Anime with English subtitles or dubs, streamed in HD from the
+                  site's own CDN servers as MKV.
                 </span>
               </span>
-              <input type="checkbox" class="site-switch" id="enableBurningSeries" data-setting="enable_burningseries"
-                data-reload="1" role="switch" aria-label="BurningSeries" />
+              <input type="checkbox" class="site-switch" id="enableMiruro" data-setting="enable_miruro"
+                data-reload="1" role="switch" aria-label="Miruro" />
             </label>
             <label class="site-row">
               <span class="site-row-text">
                 <span class="site-row-top">
-                  <span class="site-row-name">MegaKino</span>
-                  <span class="site-row-kind" data-i18n="settings.kind.mixed">Movies & series</span>
+                  <span class="site-row-name">Re:Anime</span>
+                  <span class="site-row-kind" data-i18n="settings.kind.anime">Anime</span>
                 </span>
-                <span class="site-row-hint" data-i18n="settings.enable_megakino_hint">
-                  Movies and series, in German.
-                </span>
-              </span>
-              <input type="checkbox" class="site-switch" id="enableMegaKino" data-setting="enable_megakino"
-                data-reload="1" role="switch" aria-label="MegaKino" />
-            </label>
-            <label class="site-row">
-              <span class="site-row-text">
-                <span class="site-row-top">
-                  <span class="site-row-name">Moflix</span>
-                  <span class="site-row-kind" data-i18n="settings.kind.mixed">Movies & series</span>
-                </span>
-                <span class="site-row-hint" data-i18n="settings.enable_moflix_hint">
-                  Movies and series, in German.
+                <span class="site-row-hint" data-i18n="settings.enable_reanime_hint">
+                  Anime with English subtitles or dubs, streamed in 1080p from
+                  the site's flixcloud servers (decryption needs Node.js) as MKV.
                 </span>
               </span>
-              <input type="checkbox" class="site-switch" id="enableMoflix" data-setting="enable_moflix" data-reload="1"
-                role="switch" aria-label="Moflix" />
-            </label>
-            <label class="site-row">
-              <span class="site-row-text">
-                <span class="site-row-top">
-                  <span class="site-row-name">Kinox</span>
-                  <span class="site-row-kind" data-i18n="settings.kind.mixed">Movies & series</span>
-                </span>
-                <span class="site-row-hint" data-i18n="settings.enable_kinox_hint">
-                  Movies and series. Off by default: a download almost always asks for a captcha you have to
-                  solve by hand.
-                </span>
-              </span>
-              <input type="checkbox" class="site-switch" id="enableKinox" data-setting="enable_kinox" data-reload="1"
-                role="switch" aria-label="Kinox" />
-            </label>
-            <label class="site-row">
-              <span class="site-row-text">
-                <span class="site-row-top">
-                  <span class="site-row-name">FilmPalast</span>
-                  <span class="site-row-kind" data-i18n="settings.kind.movies">Movies</span>
-                </span>
-                <span class="site-row-hint" data-i18n="settings.enable_filmpalast_hint">
-                  Movies, in German.
-                </span>
-              </span>
-              <input type="checkbox" class="site-switch" id="enableFilmPalast" data-setting="enable_filmpalast"
-                data-reload="1" role="switch" aria-label="FilmPalast" />
-            </label>
-            <label class="site-row">
-              <span class="site-row-text">
-                <span class="site-row-top">
-                  <span class="site-row-name">Filmo</span>
-                  <span class="site-row-kind" data-i18n="settings.kind.movies">Movies</span>
-                </span>
-                <span class="site-row-hint" data-i18n="settings.enable_filmo_hint">
-                  Movies, in German and English.
-                </span>
-              </span>
-              <input type="checkbox" class="site-switch" id="enableFilmo" data-setting="enable_filmo" data-reload="1"
-                role="switch" aria-label="Filmo" />
-            </label>
-            <label class="site-row">
-              <span class="site-row-text">
-                <span class="site-row-top">
-                  <span class="site-row-name">Hanime</span>
-                  <span class="site-row-kind" data-i18n="settings.kind.adult">Adult</span>
-                </span>
-                <span class="site-row-hint" data-i18n="settings.enable_htv_hint">
-                  Adult animation. Off by default.
-                </span>
-              </span>
-              <input type="checkbox" class="site-switch" id="enableHanime" data-setting="enable_htv" data-reload="1"
-                role="switch" aria-label="Hanime" />
-            </label>
-            <label class="site-row">
-              <span class="site-row-text">
-                <span class="site-row-top">
-                  <span class="site-row-name">HentaiTV</span>
-                  <span class="site-row-kind" data-i18n="settings.kind.adult">Adult</span>
-                </span>
-                <span class="site-row-hint" data-i18n="settings.enable_hentaitv_hint">
-                  Adult animation with English subtitles. Off by default.
-                </span>
-              </span>
-              <input type="checkbox" class="site-switch" id="enableHentaiTV" data-setting="enable_hentaitv"
-                data-reload="1" role="switch" aria-label="HentaiTV" />
-            </label>
-            <label class="site-row">
-              <span class="site-row-text">
-                <span class="site-row-top">
-                  <span class="site-row-name">HentaiHaven</span>
-                  <span class="site-row-kind" data-i18n="settings.kind.adult">Adult</span>
-                </span>
-                <span class="site-row-hint" data-i18n="settings.enable_hentaihaven_hint">
-                  Adult animation with English subtitles. Off by default.
-                </span>
-              </span>
-              <input type="checkbox" class="site-switch" id="enableHentaiHaven" data-setting="enable_hentaihaven"
-                data-reload="1" role="switch" aria-label="HentaiHaven" />
-            </label>
-            <label class="site-row">
-              <span class="site-row-text">
-                <span class="site-row-top">
-                  <span class="site-row-name">MangaFire</span>
-                  <span class="site-row-kind" data-i18n="settings.kind.manga">Manga</span>
-                </span>
-                <span class="site-row-hint" data-i18n="settings.enable_mangafire_hint">
-                  Manga, saved as loose images or as CBZ/EPUB files for available volumes, otherwise chapters.
-                </span>
-              </span>
-              <input type="checkbox" class="site-switch" id="enableMangaFire" data-setting="enable_mangafire"
-                data-reload="1" role="switch" aria-label="MangaFire" />
+              <input type="checkbox" class="site-switch" id="enableReanime" data-setting="enable_reanime"
+                data-reload="1" role="switch" aria-label="Re:Anime" />
             </label>
           </div>
         </section>
@@ -460,22 +357,6 @@
 
       <section class="settings-pane" id="pane-appearance" role="tabpanel" aria-labelledby="tab-appearance" tabindex="-1"
         hidden>
-        <section class="card">
-          <div class="card-head">
-            <h2 data-i18n="settings.language">Language</h2>
-            <span class="reset-badge" data-i18n="settings.resets">resets after restart</span>
-          </div>
-          <div class="control-row">
-            <label class="field field-compact">
-              <span class="field-label" data-i18n="settings.ui_language">Interface Language</span>
-              <select id="uiLanguage">
-                <option value="en">English</option>
-                <option value="de">Deutsch</option>
-              </select>
-            </label>
-          </div>
-        </section>
-
         <section class="card">
           <h2 data-i18n="settings.appearance">Appearance</h2>
           <p class="hint" data-i18n="settings.custom_css_hint">
@@ -744,6 +625,16 @@
                     <td>full</td>
                     <td data-i18n="settings.api_settings">Read the current settings</td>
                   </tr>
+                  <tr>
+                    <td><code>GET /api/settings/stream-cache</code></td>
+                    <td>full</td>
+                    <td data-i18n="settings.api_cache">Playback cache size and file count</td>
+                  </tr>
+                  <tr>
+                    <td><code>POST /api/settings/stream-cache/clear</code></td>
+                    <td>full</td>
+                    <td data-i18n="settings.api_cache_clear">Empty the playback cache</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -807,13 +698,7 @@
                 </option>
               </select>
             </label>
-            <label class="field">
-              <span class="field-label" data-i18n="settings.discord.language">Bot Language</span>
-              <select id="discordLanguage">
-                <option value="en">English</option>
-                <option value="de">Deutsch</option>
-              </select>
-            </label>
+
           </div>
 
           <div class="control-row">
@@ -883,6 +768,25 @@
             <button class="btn btn-secondary" id="revealIpBtn" data-i18n="settings.reveal">Reveal</button>
           </div>
         </section>
+
+        <section class="card">
+          <h2 data-i18n="settings.stream_cache">Stream Cache</h2>
+          <p class="hint" data-i18n="settings.stream_cache_hint">
+            Remuxed and transcoded videos wait in the .stream cache while you watch them. Old files are
+            pruned automatically once the cache passes the ANIWORLD_STREAM_CACHE_GB limit; clear it here
+            to free the space right now.
+          </p>
+          <div class="ip-card">
+            <div>
+              <div class="ip-label" data-i18n="settings.stream_cache_size">Cached video data</div>
+              <div class="ip-value" id="streamCacheValue" data-i18n="settings.stream_cache_loading">Loading...</div>
+              <div class="ip-meta" id="streamCacheMeta"></div>
+            </div>
+            <button class="btn btn-danger" id="clearStreamCacheBtn" data-i18n="settings.stream_cache_clear">
+              Clear cache
+            </button>
+          </div>
+        </section>
       </section>
     </div>
   </div>
@@ -893,5 +797,5 @@
 <script>
   window.AUTH_ENABLED = {{ auth_enabled | tojson }};
 </script>
-<script src="{{ url_for('static', filename='settings.js') }}?v={{ app_version }}"></script>
+<script src="{{ url_for('static', filename='settings.js') }}?v={{ static_version }}"></script>
 {% endblock %}

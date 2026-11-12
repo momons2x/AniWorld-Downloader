@@ -29,7 +29,6 @@ try:
         Audio,
         Subtitles,
         get_video_codec,
-        is_sto_host,
         logger,
     )
 except ImportError:
@@ -44,7 +43,6 @@ except ImportError:
         Audio,
         Subtitles,
         get_video_codec,
-        is_sto_host,
         logger,
     )
 
@@ -829,136 +827,6 @@ def _download_direct_http(episode_path, stream_url, file_name):
             )
 
 
-def _download_hls_stream(
-    episode_path, stream_url, file_name, audio_lang="jpn", owner=None
-):
-    """Download a Hanime HLS stream with per-segment retries."""
-    ep_label = file_name or ""
-    temp_full = episode_path.with_suffix(".temp_full.mkv")
-    temp_prefix = episode_path.with_suffix(".hanime_hls")
-
-    try:
-        logger.debug(f"[DOWNLOADING] {ep_label} via HLS stream")
-        video_codec = get_video_codec()
-        from ...config import DEFAULT_USER_AGENT, GLOBAL_SESSION
-        from .hls import HLSUnsupported, cleanup_temp_files, download_hls_parallel
-
-        headers = {
-            "User-Agent": GLOBAL_SESSION.headers.get("User-Agent", DEFAULT_USER_AGENT),
-            "Referer": "https://hanime.tv/",
-            "Origin": "https://hanime.tv",
-        }
-        try:
-            written = download_hls_parallel(
-                stream_url,
-                temp_prefix,
-                headers=headers,
-                preferred_audio_lang=audio_lang,
-                label=ep_label,
-            )
-        except HLSUnsupported as exc:
-            logger.debug(
-                f"[HLS] parallel Hanime download unsupported ({exc}); using FFmpeg"
-            )
-            written = []
-
-        if written:
-            if len(written) > 1:
-                node = ffmpeg.output(
-                    ffmpeg.input(str(written[0])).video,
-                    ffmpeg.input(str(written[1])).audio,
-                    str(temp_full),
-                    vcodec=video_codec,
-                    acodec="copy",
-                    **{"metadata:s:a:0": f"language={audio_lang}"},
-                )
-            else:
-                node = ffmpeg.input(str(written[0])).output(
-                    str(temp_full),
-                    vcodec=video_codec,
-                    acodec="copy",
-                    **{"metadata:s:a:0": f"language={audio_lang}"},
-                )
-            _run_ffmpeg_with_progress(node, label=ep_label)
-        else:
-            _download_full_stream(
-                stream_url,
-                temp_full,
-                {
-                    "reconnect": 1,
-                    "reconnect_streamed": 1,
-                    "reconnect_delay_max": 30,
-                    "allowed_extensions": "ALL",
-                    "headers": "".join(
-                        f"{key}: {value}\r\n" for key, value in headers.items()
-                    ),
-                },
-                headers,
-                {"metadata:s:a:0": f"language={audio_lang}"},
-                video_codec,
-                ep_label,
-                audio_lang,
-            )
-
-        _finalize_episode(temp_full, episode_path, ep_label, owner=owner)
-    except Exception:
-        if temp_full.exists():
-            temp_full.unlink()
-        raise
-    finally:
-        try:
-            cleanup_temp_files(temp_prefix)
-        except (ImportError, NameError, UnboundLocalError):
-            pass
-
-
-def download_hanime(self):
-    """Download through Hanime only, refreshing expired streams on failure."""
-    if platform.system() == "Windows":
-        manager = DependencyManager()
-        manager.fetch_binary("ffmpeg")
-
-    _prepare_resolution_naming(self)
-
-    if self._episode_path.exists():
-        logger.debug(f"[SKIPPED] {self._file_name} (already downloaded)")
-        return
-
-    os.makedirs(self._folder_path, exist_ok=True)
-    try:
-        stream_url = self.stream_url
-    except Exception as exc:
-        raise RuntimeError(f"Hanime download failed: {exc}") from exc
-
-    last_error = None
-    for attempt in range(1, 4):
-        try:
-            _download_hls_stream(
-                self._episode_path,
-                stream_url,
-                _progress_file_name(self),
-                owner=self,
-            )
-            return
-        except Exception as exc:
-            last_error = exc
-            if attempt < 3:
-                logger.warning(
-                    f"Hanime download attempt {attempt}/3 failed: {exc}; retrying with a fresh stream"
-                )
-                time.sleep(attempt)
-                try:
-                    stream_url = self.refresh_stream_url()
-                except Exception as refresh_exc:
-                    raise RuntimeError(
-                        f"Hanime download failed: {refresh_exc}"
-                    ) from refresh_exc
-
-    raise RuntimeError(
-        f"Hanime download failed after 3 attempts: {last_error}"
-    ) from last_error
-
-
 class _HLSManualUnsupported(Exception):
     """Raised when the manual HLS segment fetcher can't handle a playlist."""
 
@@ -1004,6 +872,46 @@ def _hls_uris(playlist, base_url):
     ]
 
 
+def _best_hls_variant(playlist, base_url):
+    """Return the highest-quality variant of a master playlist.
+
+    The choice compares BANDWIDTH first and falls back to the RESOLUTION
+
+    height, since some masters list variants in either order. The URI of a
+
+    variant sits on the next non-comment line after its EXT-X-STREAM-INF.
+
+    """
+    from urllib.parse import urljoin
+    lines = [line.strip() for line in playlist.splitlines()]
+    variants = []
+    for index, line in enumerate(lines):
+        if not line.startswith("#EXT-X-STREAM-INF:"):
+            continue
+        attrs = dict(re.findall(r'(\w[\w-]*)=("[^"]*"|[^,]+)', line.split(":", 1)[1]))
+        uri = next(
+            (
+                candidate
+                for candidate in lines[index + 1 :]
+                if candidate and not candidate.startswith("#")
+            ),
+            None,
+        )
+        if not uri:
+            continue
+        try:
+            bandwidth = int(attrs.get("BANDWIDTH", "0"))
+        except ValueError:
+            bandwidth = 0
+        resolution = attrs.get("RESOLUTION", "")
+        try:
+            height = int(resolution.split("x")[-1])
+        except (TypeError, ValueError):
+            height = 0
+        variants.append((bandwidth, height, urljoin(base_url, uri)))
+    if not variants:
+        return None
+    return max(variants)[2]
 def _download_hls_manual(m3u8_url, headers, temp_ts, label=""):
     """Fetch an HLS media playlist's segments over plain HTTP into `temp_ts`.
 
@@ -1027,12 +935,10 @@ def _download_hls_manual(m3u8_url, headers, temp_ts, label=""):
     if "#EXTM3U" not in playlist:
         raise _HLSManualUnsupported("not an m3u8 playlist")
 
-    # Master playlist → follow the last (usually highest-quality) variant.
     if "#EXT-X-STREAM-INF" in playlist:
-        variants = _hls_uris(playlist, m3u8_url)
-        if not variants:
+        m3u8_url = _best_hls_variant(playlist, m3u8_url)
+        if not m3u8_url:
             raise _HLSManualUnsupported("master playlist with no variants")
-        m3u8_url = variants[-1]
         resp = session.get(m3u8_url, headers=req_headers, timeout=30)
         resp.raise_for_status()
         playlist = resp.text
@@ -1124,6 +1030,9 @@ def _hls_rendition_download(stream_url, temp_prefix, headers, audio_code, ep_lab
     return video, audio
 
 
+_CRLF = chr(13) + chr(10)
+
+
 def _download_full_stream(
     stream_url,
     temp_full,
@@ -1140,7 +1049,9 @@ def _download_full_stream(
     hosters that disguise segments with non-media extensions); it opts out for
     normal/encrypted playlists, which then take the FFmpeg path.
     """
-    if ".m3u8" in stream_url.split("?", 1)[0].lower():
+    is_hls = ".m3u8" in stream_url.split("?", 1)[0].lower()
+    is_local = not stream_url.startswith(("http://", "https://"))
+    if is_hls and not is_local:
         temp_ts = temp_full.with_suffix(".seg.ts")
         try:
             _download_hls_manual(stream_url, headers, temp_ts, ep_label)
@@ -1209,13 +1120,21 @@ def download(self):
                 # extension for m3u8 inputs.
                 if ".m3u8" in (stream_url or "").split("?", 1)[0].lower():
                     input_kwargs["allowed_extensions"] = "ALL"
-                if headers:
+                if not str(stream_url or "").startswith(("http://", "https://")):
+                    # A local manifest (e.g. a decrypted Re:Anime playlist)
+                    # makes the HLS demuxer refuse https segment URLs.
+                    input_kwargs["protocol_whitelist"] = (
+                        "file,crypto,data,http,https,tcp,tls"
+                    )
+                is_local_stream = not str(stream_url or "").startswith(
+                    ("http://", "https://")
+                )
+                if headers and not is_local_stream:
                     header_list = [f"{k}: {v}" for k, v in headers.items()]
-                    input_kwargs["headers"] = "\r\n".join(header_list) + "\r\n"
-
-                # Covers every host in config.STO_DOMAINS/STO_IP
-                is_serienstream = is_sto_host(getattr(self, "url", "") or "")
-
+                    input_kwargs["headers"] = _CRLF.join(header_list) + _CRLF
+                # Serienstream host detection
+                _url = (getattr(self, "url", "") or "").lower()
+                is_serienstream = "serienstream.to" in _url or "//s.to" in _url or _url.startswith("s.to/") or _url == "s.to"
                 if is_serienstream and hasattr(self, "_normalize_language"):
                     audio_enum, sub_enum = self._normalize_language(
                         self.selected_language

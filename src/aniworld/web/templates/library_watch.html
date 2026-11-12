@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Library - AniWorld Downloader{% endblock %}
+
+{% block content %}
+<div class="container watch-container">
+  <nav class="watch-crumbs">
+    <a href="/library" data-i18n="library.title">Library</a>
+    <span class="watch-crumb-sep">/</span>
+    <span id="watchCrumbTitle">...</span>
+  </nav>
+
+  <div class="watch-layout">
+    <div class="watch-main">
+      <div class="watch-player-wrap">
+        <video id="watchPlayer" class="player-video watch-video" controls playsinline preload="metadata"></video>
+        <div class="player-status" id="watchStatus" role="status" aria-live="polite" hidden>Preparing video, this can take a moment...</div>
+      </div>
+      <button class="btn btn-ghost watch-cancel" id="watchCancel" type="button"
+              data-i18n="library.cancel_preparing" hidden>Cancel preparation</button>
+      <div class="watch-tracks" id="watchTracks" hidden>
+        <label class="watch-track-field" id="watchAudioField" hidden>
+          <span data-i18n="library.audio">Audio</span>
+          <select id="watchAudioSelect"></select>
+        </label>
+        <label class="watch-track-field" id="watchSubsField" hidden>
+          <span data-i18n="library.subtitles">Subtitles</span>
+          <select id="watchSubsSelect"></select>
+        </label>
+      </div>
+
+      <section class="watch-info">
+        <div class="watch-hero" id="watchHero">
+          <img id="watchCover" class="watch-cover" alt="" hidden />
+          <div class="watch-info-text">
+            <h1 id="watchTitle">...</h1>
+            <div class="watch-meta" id="watchMeta"></div>
+            <p class="watch-desc" id="watchDesc"></p>
+            <div class="lib-actions watch-actions">
+              <button class="btn btn-primary" id="watchPlayAll">Play All</button>
+              <label class="watch-autonext">
+                <input type="checkbox" id="watchAutoNext" checked />
+                <span>Auto next</span>
+              </label>
+              <button class="icon-btn" id="watchDeleteTitle" title="Delete title">&times;</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="watch-side">
+      <div class="watch-side-head">
+        <h2>Episodes</h2>
+        <select id="watchSeasonSelect" class="watch-season" hidden></select>
+        <span class="watch-count" id="watchCount"></span>
+      </div>
+      <input id="watchSearch" class="watch-search" type="search" placeholder="Search episodes..." />
+      <div id="watchEpisodes" class="watch-episodes"></div>
+    </aside>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='library-watch.js') }}?v={{ static_version }}"></script>
+{% endblock %}

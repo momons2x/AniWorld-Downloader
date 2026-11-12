@@ -2,7 +2,6 @@
 
 import re
 import time
-from types import SimpleNamespace
 
 from curl_cffi.requests.exceptions import HTTPError as CurlHTTPError
 from curl_cffi.requests.exceptions import RequestException as CurlRequestException
@@ -10,25 +9,18 @@ from flask import Response, jsonify, request
 from niquests.exceptions import HTTPError, RequestException
 
 from ...config import DEFAULT_USER_AGENT, GLOBAL_SESSION
-from ...extractors.provider.hanime_tv import fetch_hanime_trending
 from ...logger import get_logger
-from ...models.common import clean_title
-from ...models.mangafire_to.series import _get as get_mangafire
-from ...models.moflix_stream.http import MoflixError
+from ...models.miruro._api import fetch_latest_animes as fetch_miruro_latest
+from ...models.nineanime._api import fetch_latest_animes as fetch_nineanime_latest
+from ...models.nineanime._api import fetch_popular_animes as fetch_nineanime_popular
+from ...models.reanime._api import fetch_latest_animes as fetch_reanime_latest
+from ...models.reanime._api import fetch_trending_animes as fetch_reanime_trending
 from ...providers import normalize_url, resolve_provider
 from ...search import (
     GENRE_PAGE_SIZE,
-    fetch_burningseries_series,
-    fetch_filmo_movies,
-    fetch_filmpalast_movies,
     fetch_genre_animes,
-    fetch_kinox_movies,
-    fetch_moflix_movies,
     fetch_new_animes,
-    fetch_new_series,
     fetch_popular_animes,
-    fetch_popular_movies,
-    fetch_popular_series,
     random_anime,
 )
 from .. import media, sitesearch
@@ -39,29 +31,6 @@ logger = get_logger(__name__)
 # Browse rows change slowly, so cache them for an hour per process.
 BROWSE_TTL = 3600
 _browse_cache = {}
-
-# Sites that list one movie per page instead of seasons.
-SINGLE_PAGE_SITES = ("MegaKino", "FilmPalast", "Filmo")
-
-# These resolve their stream per episode, so the language is read once at the
-# season level instead of probing every episode.
-SEASON_LEVEL_LANGUAGE_SITES = ("Kinox", "BurningSeries")
-
-# Sites whose season endpoint has no per-episode language information. Keeping
-# the known languages here avoids probing every episode just to build the list.
-SEASON_LANGUAGE_OVERRIDES = {"Moflix": ("German Dub",)}
-
-# These take the language at construction time instead of resolving it lazily,
-# and only carry dubs. Building them with the user's default would fail outright
-# for anyone who picked a sub track, so pin one the site actually has.
-PINNED_LANGUAGE_SITES = ("MegaKino", "Filmo")
-
-
-def _build_kwargs(provider):
-    """Extra constructor arguments a site needs before it can be built at all."""
-    if provider.name in PINNED_LANGUAGE_SITES:
-        return {"selected_language": "German Dub"}
-    return {}
 
 
 def register(bp):
@@ -94,51 +63,18 @@ def search():
         return jsonify({"error": "keyword is required"}), 400
 
     try:
-        if site == "htv":
-            results = _search_hanime(keyword)
-        else:
-            results = [
-                {
-                    "title": item["title"],
-                    "url": item["url"],
-                    "poster_url": media.proxy_image(item["poster"]),
-                }
-                for item in sitesearch.search(site, keyword, raise_errors=True)
-            ]
-    except MoflixError as exc:
-        return jsonify({"error": str(exc)}), 502
+        results = [
+            {
+                "title": item["title"],
+                "url": item["url"],
+                "poster_url": media.proxy_image(item["poster"]),
+            }
+            for item in sitesearch.search(site, keyword, raise_errors=True)
+        ]
     except Exception as exc:
         logger.warning("Search on %s failed (%s)", site, type(exc).__name__)
         return jsonify({"error": f"Search on {site} failed. Please try again."}), 502
     return jsonify({"results": results})
-
-
-def _search_hanime(keyword):
-    """hanime groups sequels under one slug family, show one card per franchise."""
-    from ...search import query_hanime
-
-    hits = query_hanime(keyword) or []
-
-    results = []
-    seen = set()
-    for hit in hits:
-        slug = hit.get("slug", "")
-        if not slug:
-            continue
-        franchise = re.sub(r"-\d+$", "", slug)
-        if franchise in seen:
-            continue
-        seen.add(franchise)
-        results.append(
-            {
-                "title": re.sub(r"\s+\d+$", "", hit.get("name", "")).strip(),
-                "url": f"https://hanime.tv/videos/hentai/{slug}",
-                "poster_url": media.proxy_image(
-                    hit.get("cover_url") or hit.get("poster_url") or ""
-                ),
-            }
-        )
-    return results
 
 
 # ---------------------------------------------------------------------------
@@ -147,12 +83,6 @@ def _search_hanime(keyword):
 def _requested_url():
     url = request.args.get("url", "").strip()
     return url or None
-
-
-def _hanime_fallback_title(url):
-    slug = url.rstrip("/").split("/")[-1]
-    title = re.sub(r"-\d+$", "", slug).replace("-", " ").strip()
-    return title.title() if title else slug
 
 
 def series():
@@ -177,43 +107,17 @@ def series():
             }
         )
     except Exception as exc:
-        # hanime pages often fail to parse; a title from the slug still works
-        if provider is not None and provider.name == "HanimeTV":
-            logger.warning("Hanime series fallback for %s: %s", url, exc)
-            return jsonify(
-                {
-                    "title": _hanime_fallback_title(url),
-                    "poster_url": "",
-                    "description": "",
-                    "genres": [],
-                    "release_year": "",
-                }
-            )
         logger.exception("Series fetch failed")
         return jsonify({"error": str(exc)}), 500
 
 
-def _hentaihaven_series_url(url):
-    """A HentaiHaven episode link points back at its title page."""
-    return re.sub(r"/(?:episode|season)-\d+/?$", "/", url)
+def _has_episode_row_languages(provider_name):
+    return provider_name in ("9anime", "Miruro", "ReAnime")
 
 
 def _series_model(provider, url):
     """Whatever the series endpoint reads the title, poster and details from."""
-    if provider.name == "HentaiTV":
-        # hentai.tv has no title pages, every search hit is a single episode
-        return provider.episode_cls(url=url)
-    if provider.name == "HentaiHaven":
-        # The title page only links its episodes, the details sit on each one
-        first = provider.series_cls(url=_hentaihaven_series_url(url)).episodes[0]
-        return SimpleNamespace(
-            title=first.series_title,
-            poster_url=first.poster_url,
-            description=first.description,
-            genres=first.genres,
-            release_year=first.release_year,
-        )
-    return provider.series_cls(url=url, **_build_kwargs(provider))
+    return provider.series_cls(url=url)
 
 
 def seasons():
@@ -225,77 +129,23 @@ def seasons():
     try:
         url = normalize_url(url)
         provider = resolve_provider(url)
-        if provider.name in SINGLE_PAGE_SITES:
-            return jsonify({"seasons": _single_page_seasons(provider, url)})
-        if provider.name in media.SELF_HOSTED_LANGUAGES:
-            # Neither site has seasons. HentaiHaven's count fills in once the
-            # episodes load, counting them here would fetch the page twice.
-            return jsonify(
-                {
-                    "seasons": [
-                        {
-                            "url": url,
-                            "season_number": 1,
-                            "episode_count": 1 if provider.name == "HentaiTV" else None,
-                            "are_movies": False,
-                        }
-                    ]
-                }
-            )
-
         found = provider.series_cls(url=url)
-        # burning-series has no per-season count on the series page, reading it
-        # here would fetch every season up front. The count fills in when a
-        # season is expanded instead.
-        defer_counts = provider.name == "BurningSeries"
-        output = request.args.get("mangafire_format") or media.mangafire_format()
-        listed = (
-            found.download_items(output)
-            if provider.name == "MangaFire"
-            and output.strip().lower() in ("cbz", "epub")
-            else found.seasons
-        )
         return jsonify(
             {
                 "seasons": [
                     {
                         "url": season.url,
                         "season_number": season.season_number,
-                        "episode_count": None if defer_counts else season.episode_count,
+                        "episode_count": season.episode_count,
                         "are_movies": getattr(season, "are_movies", False),
-                        "chapter_type": getattr(season, "chapter_type", ""),
-                        "is_volume": getattr(season, "is_volume", False),
                     }
-                    for season in listed
+                    for season in found.seasons
                 ]
             }
         )
     except Exception as exc:
-        if provider is not None and provider.name == "HanimeTV":
-            logger.warning("Hanime seasons fallback for %s: %s", url, exc)
-            return jsonify({"seasons": []})
         logger.exception("Seasons fetch failed")
         return jsonify({"error": str(exc)}), 500
-
-
-def _single_page_seasons(provider, url):
-    """MegaKino serials list every episode on one page, surface them as one season."""
-    if provider.name == "MegaKino" and "/serials/" in url.lower():
-        try:
-            episode = provider.episode_cls(url=url)
-            if episode.is_series:
-                return [
-                    {
-                        "url": url,
-                        "season_number": 1,
-                        "episode_count": len(episode.series_episodes),
-                        "are_movies": False,
-                    }
-                ]
-        except Exception as exc:
-            logger.warning("MegaKino series detection failed: %s", exc)
-
-    return [{"url": url, "season_number": 1, "episode_count": 1, "are_movies": True}]
 
 
 def episodes():
@@ -309,64 +159,16 @@ def episodes():
         url = normalize_url(url)
         series_url = normalize_url(series_url)
         provider = resolve_provider(url)
-        if provider.name in SINGLE_PAGE_SITES:
-            return jsonify({"episodes": _single_page_episodes(provider, url)})
-        if provider.name == "MangaFire":
-            return jsonify({"episodes": _mangafire_pages(provider, url, series_url)})
-        if provider.name in media.SELF_HOSTED_LANGUAGES:
-            return jsonify({"episodes": _self_hosted_episodes(provider, url)})
         return jsonify({"episodes": _season_episodes(provider, url, series_url)})
     except Exception as exc:
-        if provider is not None and provider.name == "HanimeTV":
-            logger.warning("Hanime episodes fallback for %s: %s", url, exc)
-            return jsonify({"episodes": []})
         logger.exception("Episodes fetch failed")
         return jsonify({"error": str(exc)}), 500
 
 
-def _single_page_episodes(provider, url):
-    episode = provider.episode_cls(url=url, selected_language="German Dub")
-
-    if provider.name == "MegaKino" and episode.is_series:
-        return [
-            {
-                "url": f"{url}#mkep={entry['number']}",
-                "episode_number": entry["number"],
-                "title_de": "",
-                "title_en": entry["label"] or f"Episode {entry['number']}",
-                "downloaded": False,
-                "available_languages": ["German Dub"] if entry["providers"] else [],
-            }
-            for entry in episode.series_episodes
-        ]
-
-    try:
-        languages = media.language_labels(episode.provider_data)
-    except Exception as exc:
-        logger.warning("%s language detection failed: %s", provider.name, exc)
-        languages = ["German Dub"]
-
-    return [
-        {
-            "url": url,
-            "episode_number": 1,
-            "title_de": "",
-            "title_en": getattr(episode, "title_cleaned", None)
-            or getattr(episode, "title", ""),
-            "downloaded": False,
-            "available_languages": languages,
-        }
-    ]
-
-
 def _resolve_series(provider, url, series_url):
     """Build the series a season belongs to, so the season model has its context."""
-    if provider.name == "HanimeTV":
-        return provider.series_cls(url=series_url or url)
-
     if series_url is None:
-        # serienstream's own season->series fallback splits on "-" and breaks,
-        # so derive the series URL here instead.
+        # Derive the series URL from the season page instead of assuming it.
         series_url = re.sub(r"/staffel-\d+/?$", "", url)
         series_url = re.sub(r"/filme/?$", "", series_url)
     try:
@@ -378,41 +180,26 @@ def _resolve_series(provider, url, series_url):
 def _season_episodes(provider, url, series_url):
     found = _resolve_series(provider, url, series_url)
 
-    if provider.name == "HanimeTV":
-        if not found or not found.seasons:
-            return []
-        season = found.seasons[0]
-    else:
-        season = provider.season_cls(url=url, series=found)
+    season = provider.season_cls(url=url, series=found)
 
     downloaded = media.downloaded_episodes(found) if found else set()
 
-    override_languages = SEASON_LANGUAGE_OVERRIDES.get(provider.name)
-    season_languages = list(override_languages) if override_languages else None
     episode_languages = {}
     fallback_languages = None
     fallback_languages_resolved = False
-    if provider.name == "SerienStream":
+    if _has_episode_row_languages(provider.name):
         episode_languages = dict(getattr(season, "episode_languages", {}) or {})
-    if season_languages is None and provider.name in SEASON_LEVEL_LANGUAGE_SITES:
-        try:
-            season_languages = list(getattr(season, "language_labels", []) or [])
-        except Exception as exc:
-            logger.warning("%s language detection failed: %s", provider.name, exc)
-            season_languages = ["German Dub"]
 
     results = []
     for episode in season.episodes:
-        if season_languages is not None:
-            languages = season_languages
-        elif provider.name == "SerienStream":
+        if _has_episode_row_languages(provider.name):
             row_languages = episode_languages.get(episode.episode_number)
             if row_languages is not None:
                 languages = list(row_languages)
             else:
-                # Alternate/older pages may omit the row flags. Probe one
-                # episode at most and reuse its labels instead of requesting
-                # every episode page in the season.
+                # Older pages may omit the row flags. Probe one episode at
+                # most and reuse its labels instead of requesting every
+                # episode page in the season.
                 if not fallback_languages_resolved:
                     try:
                         fallback_languages = media.language_labels(
@@ -420,21 +207,18 @@ def _season_episodes(provider, url, series_url):
                         )
                     except Exception as exc:
                         logger.warning(
-                            "SerienStream language detection failed: %s", exc
+                            "%s language detection failed: %s", provider.name, exc
                         )
-                        fallback_languages = ["German Dub"]
+                        fallback_languages = ["English Sub"]
                     fallback_languages_resolved = True
                 languages = fallback_languages
         else:
             languages = media.language_labels(episode.provider_data)
-        if provider.name == "HanimeTV" and not languages:
-            languages = ["Japanese"]
 
         results.append(
             {
                 "url": episode.url,
                 "episode_number": episode.episode_number,
-                "title_de": getattr(episode, "title_de", ""),
                 "title_en": getattr(episode, "title_en", ""),
                 "downloaded": (episode.season.season_number, episode.episode_number)
                 in downloaded,
@@ -445,89 +229,6 @@ def _season_episodes(provider, url, series_url):
     return results
 
 
-def _self_hosted_title(provider, episode):
-    if provider.name == "HentaiTV":
-        return episode.title
-    # A HentaiHaven title would cost one request per episode, its URL says
-    # enough. A few titles name their only video "season-1".
-    kind = "Season" if "/season-" in episode.url else "Episode"
-    return f"{kind} {episode.episode_number}"
-
-
-def _self_hosted_episodes(provider, url):
-    """hentai.tv pages hold one episode, a HentaiHaven title lists several."""
-    if provider.name == "HentaiTV":
-        found = [provider.episode_cls(url=url)]
-    else:
-        found = provider.series_cls(url=_hentaihaven_series_url(url)).episodes
-
-    # Both name the folder after the series, the same way the download does
-    series = SimpleNamespace(title_cleaned=clean_title(found[0].series_title))
-    downloaded = media.downloaded_episodes(series)
-    language = media.SELF_HOSTED_LANGUAGES[provider.name]
-
-    return [
-        {
-            "url": episode.url,
-            "episode_number": episode.episode_number,
-            "title_de": "",
-            "title_en": _self_hosted_title(provider, episode),
-            "downloaded": (episode.season_number, episode.episode_number) in downloaded,
-            "available_languages": [language],
-            "page_count": 0,
-        }
-        for episode in found
-    ]
-
-
-def _mangafire_pages(provider, url, series_url):
-    """A MangaFire "season" is a chapter or volume; its episodes are pages."""
-    from .. import paths
-
-    found = _resolve_series(provider, url, series_url or url)
-    chapter = provider.season_cls(url=url, series=found)
-
-    title = (
-        getattr(found, "title_cleaned", None) or getattr(found, "title", "") or ""
-    ).lower()
-    bases = [base for base in paths.scan_bases() if base.is_dir()]
-
-    def on_disk(page):
-        if not title:
-            return False
-        for base in bases:
-            try:
-                entries = list(base.iterdir())
-            except OSError:
-                continue
-            for folder in entries:
-                if not folder.is_dir() or not folder.name.lower().startswith(title):
-                    continue
-                if (folder / chapter.folder_name / page.file_name).exists():
-                    return True
-        return False
-
-    try:
-        pages = list(getattr(chapter, "pages", []) or [])
-    except Exception:
-        pages = []
-
-    return [
-        {
-            "url": chapter.url,
-            "chapter_url": chapter.url,
-            "episode_number": page.page_number,
-            "page_number": page.page_number,
-            "page_count": len(pages),
-            "title_de": f"Page {page.page_number}",
-            "title_en": f"Page {page.page_number}",
-            "downloaded": on_disk(page),
-            "available_languages": ["English Dub"],
-        }
-        for page in pages
-    ]
-
-
 def providers():
     url = _requested_url()
     if not url:
@@ -536,10 +237,8 @@ def providers():
     try:
         url = normalize_url(url)
         provider = resolve_provider(url)
-        if provider.name == "MangaFire":
-            return jsonify({"providers": {}})
 
-        episode = provider.episode_cls(url=url, **_build_kwargs(provider))
+        episode = provider.episode_cls(url=url)
         return jsonify(
             {
                 "providers": media.provider_map(
@@ -556,8 +255,6 @@ def providers():
 # Misc
 # ---------------------------------------------------------------------------
 def random_title():
-    if request.args.get("site", "aniworld").strip() == "sto":
-        return jsonify({"error": "Random is not available for serienstream.to"}), 400
     url = random_anime()
     if url:
         return jsonify({"url": url})
@@ -572,8 +269,6 @@ def proxy_image():
         # Without a brotli module installed the body would come back still
         # compressed and get passed on as a broken image
         headers = {"User-Agent": DEFAULT_USER_AGENT, "Accept-Encoding": "gzip, deflate"}
-        if "hanime" in target:
-            headers["Referer"] = "https://hanime.tv/"
         response = GLOBAL_SESSION.get(target, headers=headers, timeout=10)
         response.raise_for_status()
         return Response(
@@ -651,8 +346,6 @@ def genre():
         return jsonify({"error": f"Failed to fetch genre {slug}"}), 502
     except (RequestException, CurlRequestException):
         return jsonify({"error": f"Failed to fetch genre {slug}"}), 502
-    except MoflixError as exc:
-        return jsonify({"error": str(exc)}), 502
     except ValueError:
         # Sites that know their genres up front reject an unknown one outright
         return jsonify({"error": f"Genre not available: {slug}"}), 404
@@ -674,83 +367,14 @@ def genre():
 # ---------------------------------------------------------------------------
 # Browse rows
 # ---------------------------------------------------------------------------
-def _fetch_hanime_trending():
-    """Trending hanime, one card per franchise."""
-    try:
-        hits = fetch_hanime_trending() or []
-    except Exception as exc:
-        logger.warning("HTV trending fetch failed: %s", exc)
-        return None
-
-    results = []
-    seen = set()
-    for hit in hits:
-        slug, title = hit.get("slug", ""), hit.get("name", "")
-        if not slug or not title:
-            continue
-        franchise = re.sub(r"-\d+$", "", slug)
-        if franchise in seen:
-            continue
-        seen.add(franchise)
-        results.append(
-            {
-                "title": title,
-                "url": f"https://hanime.tv/videos/hentai/{slug}",
-                "poster_url": hit.get("cover_url") or hit.get("poster_url") or "",
-                "genre": ", ".join(hit.get("tags", [])[:3]),
-            }
-        )
-    return results
-
-
-def _fetch_mangafire_trending():
-    response = get_mangafire("https://mangafire.to/api/top-titles", timeout=20)
-    items = (response.json() or {}).get("items", [])
-    return [_mangafire_card(item) for item in items if isinstance(item, dict)]
-
-
-def _mangafire_card(item):
-    url = item.get("url", "") or ""
-    if url and not url.startswith("http"):
-        url = f"https://mangafire.to{url}"
-
-    genres = [
-        entry.get("title", "")
-        for entry in (item.get("genres") or [])
-        if isinstance(entry, dict) and entry.get("title")
-    ]
-    subtitle = ", ".join(genres)
-    if not subtitle:
-        status = item.get("status", "")
-        year = item.get("year")
-        parts = [
-            part
-            for part in (status.title() if status else "", str(year) if year else "")
-            if part
-        ]
-        subtitle = " | ".join(parts)
-
-    return {
-        "title": item.get("title", "Unknown"),
-        "url": url,
-        "poster_url": item.get("poster", ""),
-        "genre": subtitle,
-    }
-
-
 _BROWSE_ROWS = (
     ("/new-animes", "new_animes", fetch_new_animes),
     ("/popular-animes", "popular_animes", fetch_popular_animes),
-    ("/new-series", "new_series", fetch_new_series),
-    ("/popular-series", "popular_series", fetch_popular_series),
-    ("/popular-movies", "popular_movies", fetch_popular_movies),
-    ("/kinox-movies", "kinox_movies", fetch_kinox_movies),
-    ("/filmpalast-movies", "filmpalast_movies", fetch_filmpalast_movies),
-    ("/filmo-movies", "filmo_movies", fetch_filmo_movies),
-    ("/burningseries-series", "burningseries_series", fetch_burningseries_series),
-    ("/moflix-movies", "moflix_movies", fetch_moflix_movies),
-    ("/htv-trending", "htv_trending", _fetch_hanime_trending),
-    ("/mangafire-trending", "mangafire_trending", _fetch_mangafire_trending),
+    ("/nineanime-latest", "nineanime_latest", fetch_nineanime_latest),
+    ("/nineanime-popular", "nineanime_popular", fetch_nineanime_popular),
+    ("/miruro-latest", "miruro_latest", fetch_miruro_latest),
+    ("/reanime-latest", "reanime_latest", fetch_reanime_latest),
+    ("/reanime-trending", "reanime_trending", fetch_reanime_trending),
 )
 
 
@@ -775,8 +399,6 @@ def _make_browse_view(key, fetch):
     def view():
         try:
             results = _cached(key, fetch, raise_errors=True)
-        except MoflixError as exc:
-            return jsonify({"error": str(exc)}), 502
         except Exception as exc:
             logger.warning("Browse fetch '%s' failed (%s)", key, type(exc).__name__)
             results = None

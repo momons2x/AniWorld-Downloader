@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ ui_language }}">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8" />
@@ -8,7 +8,7 @@
   {% set meta_title = 'Sign in' %}
   {% include "head_meta.html" %}
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ app_version }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ static_version }}" />
 </head>
 
 <body class="auth-body">

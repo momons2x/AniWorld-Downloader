@@ -442,12 +442,11 @@ def _solving(url):
 
 
 def _is_provider_url(candidate, source):
-    from ..config import STO_ALL_HOSTS
-
     parsed = urlparse(candidate)
     host = (parsed.hostname or "").removeprefix("www.")
     source_host = (urlparse(source).hostname or "").removeprefix("www.")
-    if source_host in STO_ALL_HOSTS and host in STO_ALL_HOSTS:
+    sto_hosts = {"serienstream.to", "s.to"}
+    if source_host in sto_hosts and host in sto_hosts:
         return False
     return (
         parsed.scheme in ("http", "https")
@@ -561,36 +560,6 @@ def solve_captcha(url: str):
     return _solve(url)
 
 
-def solve_sto_modal(episode_url, provider_name, language_label, redirect_url=None):
-    """Try S.to's Weiter first, then solve widgets if the player stays blocked."""
-
-    def prepare(page):
-        clicked = page.evaluate(
-            """({redirect, provider, language}) => {
-            const target = redirect ? new URL(redirect).pathname + new URL(redirect).search : null;
-            for (const button of document.querySelectorAll('[data-play-url]')) {
-                const matches = target ? button.dataset.playUrl === target :
-                    button.dataset.providerName === provider && button.dataset.languageLabel === language;
-                if (matches) { button.click(); return true; }
-            }
-            return false;
-        }""",
-            {
-                "redirect": redirect_url,
-                "provider": provider_name,
-                "language": language_label,
-            },
-        )
-        if not clicked and redirect_url:
-            page.goto(redirect_url, wait_until="domcontentloaded", timeout=30000)
-        elif not clicked:
-            raise RuntimeError(
-                f"S.to player button not found for {provider_name} ({language_label})"
-            )
-
-    return _solve(episode_url, prepare=prepare, timeout=90)
-
-
 def playwright_get_page_url(url: str) -> str:
     result = solve_captcha(url)
     if result is None:
@@ -609,44 +578,3 @@ def playwright_get_iframe_url(url: str, timeout: int = 20) -> str:
                 return result
             page.wait_for_timeout(500)
     return url
-
-
-def playwright_get_hanime_manifest_token(url: str, timeout: int = 15) -> str:
-    """Capture the token returned by Hanime's player authentication request."""
-    token = None
-    challenge_timeout = _captcha_timeout(300)
-    with (
-        _solving(url) as session,
-        _browser(url, offscreen=session is not None) as (context, page),
-    ):
-
-        def capture(response):
-            nonlocal token
-            if (
-                response.status == 200
-                and urlparse(response.url).hostname == "auth.hanime.tv"
-            ):
-                token = response.header_value("x-token") or token
-
-        page.on("response", capture)
-        try:
-            page.goto(
-                url, wait_until="domcontentloaded", timeout=max(1, timeout) * 1000
-            )
-        except Error:
-            if not token:
-                raise
-        deadline = time.monotonic() + challenge_timeout
-        solver = _ChallengeSolver()
-        while not token and time.monotonic() < deadline:
-            if session:
-                session.update(page)
-            if _is_captcha_page_dom(page) and solver.ready_to_submit(page):
-                _click_submit_button(page)
-            page.wait_for_timeout(500)
-        if not token:
-            raise TimeoutError(
-                f"Hanime player handshake timed out after {challenge_timeout}s"
-            )
-        _export_session_cookies(context)
-    return token

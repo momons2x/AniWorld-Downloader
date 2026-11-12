@@ -235,87 +235,6 @@ def test_interactive_solve_delivers_clicks_and_always_cleans_up(
     handle.close.assert_called_once()
 
 
-@pytest.mark.parametrize("destination", ["iframe", "popup"])
-@pytest.mark.parametrize("manual", ["0", "1"])
-def test_sto_clicks_continue_without_touching_widgets(
-    browser, monkeypatch, destination, manual
-):
-    handle, page = browser
-    monkeypatch.setenv("ANIWORLD_CAPTCHA_MANUAL", manual)
-    frame = Mock(url="about:blank")
-    frame.name = "player-iframe"
-    page.frames = [frame]
-    button = Mock()
-    frame.locator.return_value.all.return_value = [button]
-    solver = Mock()
-    monkeypatch.setattr(captcha, "_ChallengeSolver", lambda: solver)
-    monkeypatch.setattr(
-        captcha,
-        "_is_captcha_page_dom",
-        Mock(side_effect=AssertionError("S.to must skip widgets")),
-    )
-    ad = Mock(url="https://ads.example/")
-
-    def prepare(*args):
-        handle.context.on.call_args.args[1](ad)
-        return True
-
-    page.evaluate.side_effect = prepare
-
-    def submit(*args):
-        if destination == "iframe":
-            frame.url = PLAYER
-        else:
-            popup = Mock(url=PLAYER, frames=[])
-            handle.context.on.call_args.args[1](popup)
-            popup.close.assert_not_called()
-            handle.context.pages.append(popup)
-
-    button.evaluate.side_effect = submit
-    assert (
-        captcha.solve_sto_modal(SOURCE, "VOE", "Deutsch", "https://s.to/r?t=token")
-        == PLAYER
-    )
-    ad.close.assert_called_once()
-    solver.ready_to_submit.assert_not_called()
-    button.evaluate.assert_called_once()
-    handle.close.assert_called_once()
-
-
-@pytest.mark.parametrize("manual", ["0", "1"])
-def test_sto_solves_required_widgets_after_initial_submission(
-    browser, monkeypatch, manual
-):
-    handle, page = browser
-    monkeypatch.setenv("ANIWORLD_CAPTCHA_MANUAL", manual)
-    page.evaluate.return_value = True
-    solver = Mock()
-    ad = Mock(url="https://ads.example/")
-
-    def wait_for_widgets(page):
-        if solver.ready_to_submit.call_count == 1:
-            handle.context.on.call_args.args[1](ad)
-            return False
-        return True
-
-    solver.ready_to_submit.side_effect = wait_for_widgets
-    monkeypatch.setattr(captcha, "_ChallengeSolver", lambda: solver)
-    submissions = []
-
-    def submit(page):
-        submissions.append(page.url)
-        if len(submissions) == 2:
-            page.url = PLAYER
-        return True
-
-    monkeypatch.setattr(captcha, "_click_submit_button", submit)
-    assert captcha.solve_sto_modal(SOURCE, "VOE", "Deutsch") == PLAYER
-    assert len(submissions) == 2
-    assert solver.ready_to_submit.call_count == 2
-    ad.close.assert_called_once()
-    handle.close.assert_called_once()
-
-
 @pytest.mark.parametrize(
     "visible,offscreen,hidden",
     [
@@ -381,17 +300,6 @@ def test_solve_timeout_override_and_invalid_fallback(
     handle.close.assert_called_once()
 
 
-def test_hanime_timeout_uses_override_and_releases_browser(browser, monkeypatch):
-    handle, page = browser
-    monkeypatch.setenv("ANIWORLD_CAPTCHA_TIMEOUT", "1")
-    monkeypatch.setattr(captcha, "_is_captcha_page_dom", lambda page: False)
-    with pytest.raises(TimeoutError, match="after 1s"):
-        captcha.playwright_get_hanime_manifest_token(SOURCE)
-    assert page.wait_for_timeout.call_count == 2
-    assert captcha.get_captcha_status() is None
-    handle.close.assert_called_once()
-
-
 @pytest.mark.parametrize("enabled", ["0", "1"])
 def test_debug_logs_browser_errors_and_ignores_ordinary_console_messages(
     monkeypatch, enabled
@@ -440,28 +348,6 @@ def test_debug_logs_browser_errors_and_ignores_ordinary_console_messages(
     )
 
 
-def test_debug_listener_setup_does_not_break_hanime_token_capture(browser, monkeypatch):
-    handle, page = browser
-    monkeypatch.setenv("ANIWORLD_CAPTCHA_DEBUG_LOG", "1")
-
-    def navigate(*args, **kwargs):
-        callbacks = {call.args[0]: call.args[1] for call in page.on.call_args_list}
-        page.context.new_cdp_session.return_value.send.assert_called_once_with(
-            "Runtime.enable"
-        )
-        callbacks["response"](
-            SimpleNamespace(
-                status=200,
-                url="https://auth.hanime.tv/",
-                header_value=lambda name: "token",
-            )
-        )
-
-    page.goto.side_effect = navigate
-    assert captcha.playwright_get_hanime_manifest_token(SOURCE) == "token"
-    handle.close.assert_called_once()
-
-
 def test_provider_capture_rejects_challenges_and_existing_ad_frames():
     frames = []
     for url in (
@@ -495,17 +381,6 @@ def test_browser_closes_when_context_creation_fails(tmp_path):
     with pytest.raises(Error, match="context failed"):
         captcha._launch_browser_context(runtime)
     browser.close.assert_called_once()
-
-
-def test_failed_handshake_does_not_leave_queue_session_active(browser, monkeypatch):
-    handle, page = browser
-    monkeypatch.setattr(captcha._local, "queue_id", 42)
-    page.goto.side_effect = Error("navigation failed")
-    with pytest.raises(Error, match="navigation failed"):
-        captcha.playwright_get_hanime_manifest_token(SOURCE)
-    assert captcha.get_captcha_status() is None
-    assert 42 not in captcha._active_sessions
-    handle.close.assert_called_once()
 
 
 def test_navigation_ignores_old_child_frames():

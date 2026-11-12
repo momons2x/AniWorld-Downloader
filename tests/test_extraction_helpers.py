@@ -16,30 +16,19 @@ from aniworld.extractors.common import (
 )
 from aniworld.extractors.provider import filemoon
 from aniworld.models import (
-    AniworldEpisode,
-    BurningSeriesEpisode,
-    FilmoEpisode,
-    FilmPalastEpisode,
-    KinoxEpisode,
-    MegaKinoEpisode,
-    MoflixEpisode,
-    SerienstreamEpisode,
+    MiruroEpisode,
+    NineAnimeEpisode,
+    ReanimeEpisode,
 )
 from aniworld.models.common.extraction import resolve_stream_url
-from aniworld.models.hentaihaven import HentaiHavenEpisode
 
 
 @pytest.mark.parametrize(
     "model",
     [
-        AniworldEpisode,
-        BurningSeriesEpisode,
-        FilmoEpisode,
-        FilmPalastEpisode,
-        KinoxEpisode,
-        MegaKinoEpisode,
-        MoflixEpisode,
-        SerienstreamEpisode,
+        NineAnimeEpisode,
+        MiruroEpisode,
+        ReanimeEpisode,
     ],
 )
 def test_models_resolve_through_the_registered_extractor(monkeypatch, model):
@@ -146,24 +135,6 @@ def test_video_metadata_skips_bad_scripts_and_handles_json_ld_shapes(structure):
 )
 def test_absent_video_metadata_is_an_empty_mapping(html):
     assert extract_video_metadata(html) == {}
-
-
-def test_haven_release_date_uses_video_metadata_in_a_graph(monkeypatch):
-    html = (
-        '<script type="application/ld+json">'
-        + json.dumps(
-            {
-                "@graph": [
-                    {"@type": "WebPage", "datePublished": "2020-01-01"},
-                    {"@type": "VideoObject", "uploadDate": "2023-09-22"},
-                ]
-            }
-        )
-        + "</script>"
-    )
-    monkeypatch.setattr(HentaiHavenEpisode, "_html", property(lambda self: html))
-    episode = HentaiHavenEpisode("https://hentaihaven.xxx/watch/example/episode-1/")
-    assert episode.release_date == "2023-09-22"
 
 
 @pytest.mark.parametrize("plain", [b"", b"f", b"fo", b"foo", b"\xfb\xff"])

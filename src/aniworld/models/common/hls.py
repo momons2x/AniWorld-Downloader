@@ -126,18 +126,58 @@ def _default_headers(headers):
     return merged
 
 
+def _local_text(url):
+    """Read a playlist from disk when the URL is a local file.
+
+    Some providers serve a pre-decrypted manifest as a local file (the
+    Re:Anime provider); its variant/audio renditions then live next to it
+    while segments stay remote.
+    """
+    try:
+        path = Path(url)
+        if path.is_file():
+            return path.read_text(encoding="utf-8")
+    except OSError:
+        pass
+    return None
+
+
 def _fetch_text(url, headers):
+    if isinstance(url, str) and url.startswith("file://"):
+        try:
+            from urllib.request import url2pathname
+
+            path = Path(url2pathname(url[7:]))
+            if path.is_file():
+                return path.read_text(encoding="utf-8")
+        except OSError:
+            pass
     resp = _session().get(url, headers=headers, timeout=SEGMENT_TIMEOUT)
     resp.raise_for_status()
     return resp.text
 
 
 def _fetch_bytes(url, headers):
-    """Fetch a URL, retrying transient failures."""
+    """Fetch a URL, retrying transient failures.
+
+    Rate-limited CDNs (429/503) get a much longer, growing backoff than
+    other failures: short retries just hammer the throttle and the caller
+    gives up while the limiter is still holding.
+    """
     last_error = None
     for attempt in range(SEGMENT_RETRIES):
         try:
             resp = _session().get(url, headers=headers, timeout=SEGMENT_TIMEOUT)
+            if resp.status_code in (429, 503):
+                retry_after = (resp.headers.get("Retry-After") or "").strip()
+                if retry_after.isdigit():
+                    wait = max(1, min(int(retry_after), 120))
+                else:
+                    wait = 10 * (2**attempt)
+                last_error = RuntimeError(f"HTTP {resp.status_code}")
+                if attempt < SEGMENT_RETRIES - 1:
+                    time.sleep(wait)
+                continue
             resp.raise_for_status()
             content = resp.content
             if not content:
@@ -475,6 +515,12 @@ def download_hls_parallel(
 
     temp_prefix = Path(temp_prefix).expanduser()
     headers = _default_headers(headers)
+    if not str(stream_url).startswith(("http://", "https://")) and not str(
+        stream_url
+    ).startswith("file://"):
+        # A local manifest: give the parser a file:// base URL so its
+        # relative variant/audio URIs resolve to sibling files.
+        stream_url = Path(stream_url).expanduser().resolve().as_uri()
 
     master_text = _fetch_text(stream_url, headers)
     if not master_text.lstrip().startswith("#EXTM3U"):

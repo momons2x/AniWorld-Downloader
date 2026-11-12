@@ -9,34 +9,25 @@ from unittest.mock import Mock
 import pytest
 
 from aniworld import arguments
-from aniworld.models.animeidhentai.episode import AnimeIDHentaiEpisode
-from aniworld.models.aniworld_to.episode import AniworldEpisode
-from aniworld.models.burningseries.series import BurningSeriesEpisode
-from aniworld.models.filmo_to.episode import FilmoEpisode
-from aniworld.models.filmpalast_to.episode import FilmPalastEpisode
-from aniworld.models.hanime_tv.episode import HanimeTVEpisode
-from aniworld.models.hentai_tv.episode import HentaiTVEpisode
-from aniworld.models.hentaihaven.episode import HentaiHavenEpisode
-from aniworld.models.kinox.series import KinoxEpisode
-from aniworld.models.mangafire_to.series import MangaFireToChapter, MangaFireToSeries
-from aniworld.models.megakino.series import MegaKinoEpisode
-from aniworld.models.moflix_stream.series import MoflixEpisode
-from aniworld.models.s_to.episode import SerienstreamEpisode
+from aniworld.models import (
+    MiruroEpisode,
+    NineAnimeEpisode,
+    ReanimeEpisode,
+)
 
 MODELS = [
-    (AniworldEpisode, "https://aniworld.to/anime/stream/example/staffel-1/episode-1"),
-    (SerienstreamEpisode, "https://s.to/serie/example/staffel-1/episode-1"),
-    (HanimeTVEpisode, "https://hanime.tv/videos/hentai/example-1"),
-    (HentaiTVEpisode, "https://hentai.tv/hentai/example-episode-2"),
-    (AnimeIDHentaiEpisode, "https://animeidhentai.com/641/example-episode-2-sub-eng"),
-    (HentaiHavenEpisode, "https://hentaihaven.xxx/watch/example/episode-2/"),
-    (MegaKinoEpisode, "https://megakino.example/serials/123-example.html"),
-    (MoflixEpisode, "https://moflix-stream.xyz/titles/42/season/2/episodes/3"),
-    (KinoxEpisode, "https://kinox.to/Stream/Example.html"),
-    (BurningSeriesEpisode, "https://bs.to/serie/example/1/1-example/de"),
-    (FilmPalastEpisode, "https://filmpalast.to/stream/example"),
-    (FilmoEpisode, "https://filmo.to/movies/example"),
-    (MangaFireToChapter, "https://mangafire.to/title/z9w-velvet-kisss/chapter/1"),
+    (NineAnimeEpisode, "https://9anime.org.lv/a-certain-dark-item-episode-1/"),
+    (
+        MiruroEpisode,
+        (
+            "https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/"
+            "even-the-student-council-has-its-holes/episode/1"
+        ),
+    ),
+    (
+        ReanimeEpisode,
+        "https://reanime.to/watch/even-the-student-council-has-its-holes-6ayeba?ep=1",
+    ),
 ]
 
 
@@ -145,6 +136,7 @@ def test_changing_selected_root_updates_complete_video_path(
         "release_year": "2024",
         "season_number": 1,
         "episode_number": 1,
+        "selected_language": "English Sub",
         "is_series": True,
     }.items():
         monkeypatch.setattr(cls, name, value, raising=False)
@@ -305,47 +297,3 @@ def test_direct_provider_download_uses_cli_output(
 
     assert direct_provider_download("--output", value) == destination / "input.mkv"
     assert not (home / "ignored").exists()
-
-
-def test_mangafire_download_uses_expanded_selected_path(home, monkeypatch):
-    series = SimpleNamespace(title="Velvet Kiss")
-    chapter = MangaFireToChapter(
-        "https://mangafire.to/title/z9w-velvet-kisss/chapter/1",
-        series=series,
-        chapter_number=1,
-        selected_path="~/Manga",
-        format="jpg",
-    )
-    page = SimpleNamespace(download=Mock())
-    monkeypatch.setattr(chapter, "_MangaFireToChapter__pages", [page])
-    destination = chapter.download()
-    assert destination == home / "Manga" / "Velvet Kiss" / "Chapter 1"
-    assert destination.is_dir()
-    page.download.assert_called_once_with(destination, total_pages=1)
-
-
-def test_mangafire_series_uses_shared_configured_root(home, monkeypatch):
-    monkeypatch.setenv("ANIWORLD_DOWNLOAD_PATH", "~/Manga")
-    series = MangaFireToSeries("https://mangafire.to/title/z9w-velvet-kisss")
-    monkeypatch.setattr(MangaFireToSeries, "title", "Velvet Kiss")
-    chapter = SimpleNamespace(folder_name="Chapter 1", download=Mock())
-    destination = series.download(chapters=[chapter])
-    assert destination == home / "Manga" / "Velvet Kiss"
-    chapter.download.assert_called_once_with(
-        destination / "Chapter 1", chapter_index=1, total_chapters=1
-    )
-
-
-def test_mangafire_explicit_folder_remains_a_direct_destination(home, monkeypatch):
-    chapter = MangaFireToChapter(
-        "https://mangafire.to/title/z9w-velvet-kisss/chapter/1",
-        chapter_id=5484330,
-        chapter_number=1,
-        selected_path="~/ignored",
-        format="jpg",
-    )
-    page = SimpleNamespace(download=Mock())
-    monkeypatch.setattr(chapter, "_MangaFireToChapter__pages", [page])
-    assert chapter.download(folder="direct/Chapter 1") == Path("direct/Chapter 1")
-    assert (Path.cwd() / "direct/Chapter 1").is_dir()
-    assert not (home / "direct").exists()

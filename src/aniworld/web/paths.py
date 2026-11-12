@@ -7,10 +7,9 @@ from . import db
 
 # Subfolder used per language when language separation is on.
 LANG_FOLDERS = {
-    "German Dub": "german-dub",
-    "German Sub": "german-sub",
     "English Dub": "english-dub",
     "English Sub": "english-sub",
+    "Indonesian Sub": "indonesian-sub",
 }
 
 ALL_LANG_FOLDERS = tuple(LANG_FOLDERS.values())
@@ -21,7 +20,7 @@ def lang_separation_enabled():
 
 
 def lang_folder_for(language):
-    """Folder name for a language label, e.g. 'German Dub' -> 'german-dub'."""
+    """Folder name for a language label, e.g. 'English Sub' -> 'english-sub'."""
     return LANG_FOLDERS.get(language, str(language).lower().replace(" ", "-"))
 
 

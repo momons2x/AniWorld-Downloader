@@ -4,12 +4,6 @@ from aniworld.models import (
     AniworldEpisode,
     AniworldSeason,
     AniworldSeries,
-    BurningSeriesSeries,
-    FilmPalastEpisode,
-    KinoxSeries,
-    SerienstreamEpisode,
-    SerienstreamSeason,
-    SerienstreamSeries,
 )
 
 RED = "\033[31m"
@@ -64,22 +58,6 @@ def run_all_tests():
             AniworldEpisode,
             "https://aniworld.to/anime/stream/highschool-dxd/staffel-1/episode-1",
         ),
-        (
-            SerienstreamSeries,
-            "https://serienstream.to/serie/american-horror-story-die-dunkle-seite-in-dir",
-        ),
-        (
-            SerienstreamSeason,
-            "https://serienstream.to/serie/american-horror-story-die-dunkle-seite-in-dir/staffel-1",
-        ),
-        (
-            SerienstreamEpisode,
-            "https://serienstream.to/serie/american-horror-story-die-dunkle-seite-in-dir/staffel-1/episode-1",
-        ),
-        # New sites (contributed): movie + series entry points
-        (FilmPalastEpisode, "https://filmpalast.to/stream/scream-7"),
-        (KinoxSeries, "https://kinox.to/Stream/Avatar-Der_Herr_der_Elemente.html"),
-        (BurningSeriesSeries, "https://bs.to/serie/Breaking-Bad"),
     ]
     all_passed = True
     for cls, url in tests:

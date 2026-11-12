@@ -127,39 +127,27 @@ _WEEKDAYS = {
     "sunday": 0,
     "sun": 0,
     "su": 0,
-    "sonntag": 0,
-    "so": 0,
     "monday": 1,
     "mon": 1,
     "mo": 1,
-    "montag": 1,
     "tuesday": 2,
     "tues": 2,
     "tue": 2,
     "tu": 2,
-    "dienstag": 2,
-    "di": 2,
     "wednesday": 3,
     "wed": 3,
     "we": 3,
-    "mittwoch": 3,
-    "mi": 3,
     "thursday": 4,
     "thurs": 4,
     "thur": 4,
     "thu": 4,
     "th": 4,
-    "donnerstag": 4,
-    "do": 4,
     "friday": 5,
     "fri": 5,
     "fr": 5,
-    "freitag": 5,
     "saturday": 6,
     "sat": 6,
     "sa": 6,
-    "samstag": 6,
-    "sonnabend": 6,
 }
 
 _MONTH_NAMES = (
@@ -412,29 +400,20 @@ _FILLER = {
     "run",
     "runs",
     "sync",
-    "jeden",
-    "jede",
-    "jedes",
-    "alle",
-    "uhr",
     "o'clock",
 }
-_EVERY_DAY = {"day", "days", "daily", "everyday", "tag", "tage", "täglich", "taeglich"}
+_EVERY_DAY = {"day", "days", "daily", "everyday"}
 _DAY_GROUPS = {
     "weekday": {1, 2, 3, 4, 5},
     "weekdays": {1, 2, 3, 4, 5},
-    "wochentag": {1, 2, 3, 4, 5},
-    "wochentags": {1, 2, 3, 4, 5},
-    "werktags": {1, 2, 3, 4, 5},
     "weekend": {0, 6},
     "weekends": {0, 6},
-    "wochenende": {0, 6},
 }
-_NOON = {"noon", "midday", "mittag"}
-_MIDNIGHT = {"midnight", "mitternacht"}
+_NOON = {"noon", "midday"}
+_MIDNIGHT = {"midnight"}
 
-_SPLIT_AT = re.compile(r"\s*(?:\bat\b|\bum\b|@)\s*")
-_TIME_RE = re.compile(r"(\d{1,2})(?:[:.](\d{2}))?(am|pm|uhr)?")
+_SPLIT_AT = re.compile(r"\s*(?:\bat\b|@)\s*")
+_TIME_RE = re.compile(r"(\d{1,2})(?:[:.](\d{2}))?(am|pm)?")
 _STEP_RE = re.compile(r"(\d+)(minutes?|mins?|m|hours?|hrs?|h|days?|d)")
 
 
@@ -477,7 +456,7 @@ def _parse_line(line):
 def _parse_phrase(text):
     cleaned = text.lower().strip().rstrip(".")
     cleaned = cleaned.replace("&", ",")
-    cleaned = re.sub(r"\b(?:and|und)\b", ",", cleaned)
+    cleaned = re.sub(r"\band\b", ",", cleaned)
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
 
     parts = _SPLIT_AT.split(cleaned, maxsplit=1)
@@ -640,28 +619,6 @@ _WORDS = {
             "Thursday",
             "Friday",
             "Saturday",
-        ),
-    },
-    "de": {
-        "at": "um",
-        "and": "und",
-        "every_day": "jeden Tag",
-        "weekdays": "wochentags",
-        "weekends": "am Wochenende",
-        "days_prefix": "jeden ",
-        "every_hour": "jede Stunde",
-        "every_hours": "alle {count} Stunden",
-        "every_minutes": "alle {count} Minuten",
-        "every_days": "alle {count} Tage",
-        "past": "{minute} nach jeder vollen Stunde",
-        "names": (
-            "Sonntag",
-            "Montag",
-            "Dienstag",
-            "Mittwoch",
-            "Donnerstag",
-            "Freitag",
-            "Samstag",
         ),
     },
 }

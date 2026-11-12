@@ -88,10 +88,6 @@ Example 9: Pick a Random Anime
 Pick a random AniWorld title, then choose episodes in the terminal menu:
 aniworld --random-anime
 
-Example 10: Search SerienStream
-Search for a series interactively using SerienStream:
-aniworld --use-sto-search
-
 Example 11: Configure Anime4K for Playback
 Install the high-end GPU shaders and watch an episode:
 aniworld --no-menu --action Watch --anime4k High \
@@ -242,12 +238,6 @@ def parse_args():
         action="store_true",
         help="Fetch a random anime series",
     )
-    discovery.add_argument(
-        "-sto",
-        "--use-sto-search",
-        action="store_true",
-        help="Prefer serienstream.to for interactive searches.",
-    )
 
     # =========================
     # Anime4K
@@ -392,9 +382,6 @@ def parse_args():
 
     if args.keep_watching:
         os.environ["ANIWORLD_KEEP_WATCHING"] = "1"
-
-    if args.use_sto_search:
-        os.environ["ANIWORLD_USE_STO_SEARCH"] = "1"
 
     if args.output:
         output_path = os.path.expanduser(args.output)

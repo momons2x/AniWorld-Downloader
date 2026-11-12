@@ -3,7 +3,7 @@
 from flask import Response, jsonify, request
 
 from ...logger import get_logger
-from .. import db, schedule, settings_store, theming
+from .. import db, playback, schedule, settings_store, theming
 from ..media import normalize_default_sites
 
 logger = get_logger(__name__)
@@ -18,6 +18,10 @@ def register(bp):
     )
     bp.add_url_rule("/settings/env", view_func=export_env)
     bp.add_url_rule("/settings/path-preview", view_func=path_preview)
+    bp.add_url_rule("/settings/stream-cache", view_func=stream_cache)
+    bp.add_url_rule(
+        "/settings/stream-cache/clear", view_func=clear_stream_cache, methods=["POST"]
+    )
     bp.add_url_rule("/custom-css", view_func=get_custom_css)
     bp.add_url_rule("/custom-css", view_func=update_custom_css, methods=["PUT"])
     bp.add_url_rule("/custom-shader", view_func=get_custom_shader)
@@ -57,7 +61,7 @@ def preview_schedule():
     saving stays a separate request.
     """
     data = request.get_json(silent=True) or {}
-    language = settings_store.ui_language()
+    language = "en"
 
     if "autosync_interval" in data:
         try:
@@ -89,6 +93,21 @@ def path_preview():
     """
     typed = (request.args.get("download_path") or "").strip()
     return jsonify(settings_store.preview_paths(typed or None))
+
+
+def stream_cache():
+    """Size and file count of the playback cache, for the administration page."""
+    return jsonify(playback.cache_stats())
+
+
+def clear_stream_cache():
+    """Empty the playback cache. Preparations still running are cancelled."""
+    try:
+        result = playback.clear_cache()
+    except Exception as exc:
+        logger.exception("Clearing the playback cache failed")
+        return jsonify({"error": str(exc) or "Could not clear the cache"}), 500
+    return jsonify({"ok": True, **result})
 
 
 def export_env():

@@ -6,7 +6,7 @@ episode = SerienstreamEpisode(
 
 print("=== SERIES INFO ===")
 print("URL:", episode.url)
-print("Title:", episode.title_de)
+print("Title:", getattr(episode, "title_en", ""))
 print("Redirect URL:", episode.redirect_url)
 print("Provider URL:", episode.provider_url)
 print("Stream URL:", episode.stream_url)

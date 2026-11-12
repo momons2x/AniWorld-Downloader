@@ -12,39 +12,16 @@
       {% if sites.aniworld %}
       <button class="segmented-btn" data-site="aniworld">AniWorld</button>
       {% endif %}
-      {% if sites.sto %}
-      <button class="segmented-btn" data-site="sto">SerienStream</button>
-      {% endif %}
-      {% if sites.burningseries %}
-      <button class="segmented-btn" data-site="burningseries">BurningSeries</button>
-      {% endif %}
-      {% if sites.megakino %}
-      <button class="segmented-btn" data-site="megakino">MegaKino</button>
-      {% endif %}
-      {% if sites.kinox %}
-      <button class="segmented-btn" data-site="kinox">Kinox</button>
-      {% endif %}
-      {% if sites.filmpalast %}
-      <button class="segmented-btn" data-site="filmpalast">FilmPalast</button>
-      {% endif %}
-      {% if sites.moflix %}
-      <button class="segmented-btn" data-site="moflix">Moflix</button>
-      {% endif %}
-      {% if sites.filmo %}
-      <button class="segmented-btn" data-site="filmo">Filmo</button>
-      {% endif %}
-      {% if sites.htv %}
-      <button class="segmented-btn" data-site="htv">Hanime</button>
-      {% endif %}
-      {% if sites.hentaitv %}
-      <button class="segmented-btn" data-site="hentaitv">HentaiTV</button>
-      {% endif %}
-      {% if sites.hentaihaven %}
-      <button class="segmented-btn" data-site="hentaihaven">HentaiHaven</button>
-      {% endif %}
-      {% if sites.mangafire %}
-      <button class="segmented-btn" data-site="mangafire">MangaFire</button>
-      {% endif %}
+    {% if sites.nineanime %}
+    <button class="segmented-btn" data-site="nineanime">9anime</button>
+    {% endif %}
+    {% if sites.miruro %}
+    <button class="segmented-btn" data-site="miruro">Miruro</button>
+    {% endif %}
+    {% if sites.reanime %}
+    <button class="segmented-btn" data-site="reanime">Re:Anime</button>
+    {% endif %}
+      <button class="segmented-btn" data-site="local">My Anime</button>
     </div>
   </div>
 
@@ -52,6 +29,32 @@
     <input type="text" id="searchInput" placeholder="Search AniWorld..." autofocus />
     <button class="btn btn-primary" id="searchBtn" data-i18n="index.search">Search</button>
     <button class="btn btn-secondary" id="randomBtn" data-i18n="index.random">Random</button>
+  </div>
+
+  <div class="my-anime-mode" id="myAnimeMode" hidden>
+    <div class="genre-list" id="myAnimeModeList">
+      <button type="button" class="genre-chip" data-mode="library" data-i18n="myanime.library">Library</button>
+      <button type="button" class="genre-chip" data-mode="discover" data-i18n="myanime.discover">Discover</button>
+    </div>
+    <div class="discover-controls" id="discoverControls" hidden>
+      <div class="discover-row">
+        <span class="discover-label" data-i18n="myanime.list_filter">List</span>
+        <div class="genre-list discover-kinds" id="discoverKindList" role="list">
+          <button type="button" class="genre-chip" data-kind="trending" data-i18n="myanime.trending">Trending</button>
+          <button type="button" class="genre-chip" data-kind="season" data-i18n="myanime.season">This season</button>
+          <button type="button" class="genre-chip" data-kind="top" data-i18n="myanime.top">Top rated</button>
+          <button type="button" class="genre-chip" data-kind="random" data-i18n="myanime.random">Random</button>
+        </div>
+      </div>
+      <div class="discover-genre-bar" id="discoverGenreBar" hidden>
+        <span class="discover-label" data-i18n="myanime.genre_filter">Genre</span>
+        <div class="genre-list discover-genres" id="discoverGenreList" role="list"></div>
+      </div>
+      <div class="discover-genre-bar" id="discoverTagBar" hidden>
+        <span class="discover-label" data-i18n="myanime.tag_filter">Tags</span>
+        <div class="genre-list discover-genres" id="discoverTagList" role="list"></div>
+      </div>
+    </div>
   </div>
 
   <div class="genre-bar" id="genreBar" hidden>
@@ -66,85 +69,64 @@
     <button class="btn btn-secondary" id="genreMoreBtn" data-i18n="browse.load_more">Load more</button>
   </div>
 
+  <div class="genre-more" id="discoverMore" hidden>
+    <button class="btn btn-secondary" id="discoverMoreBtn" data-i18n="browse.load_more">Load more</button>
+  </div>
+
   <div id="browse">
     {% if sites.aniworld %}
     <section class="browse-section" data-row="new_animes" data-sites="aniworld">
       <h2 class="browse-heading" data-i18n="browse.new_animes">New Animes</h2>
       <div class="browse-grid"></div>
     </section>
-    {% endif %}
-    {% if sites.aniworld %}
     <section class="browse-section" data-row="popular_animes" data-sites="aniworld">
       <h2 class="browse-heading" data-i18n="browse.popular_animes">Popular Animes</h2>
       <div class="browse-grid"></div>
     </section>
     {% endif %}
-    {% if sites.sto %}
-    <section class="browse-section" data-row="new_series" data-sites="sto">
-      <h2 class="browse-heading" data-i18n="browse.new_series">New Series</h2>
+    {% if sites.nineanime %}
+    <section class="browse-section" data-row="nineanime_latest" data-sites="nineanime">
+      <h2 class="browse-heading" data-i18n="browse.nineanime_latest">Latest on 9anime</h2>
+      <div class="browse-grid"></div>
+    </section>
+    <section class="browse-section" data-row="nineanime_popular" data-sites="nineanime">
+      <h2 class="browse-heading" data-i18n="browse.nineanime_popular">Popular on 9anime</h2>
       <div class="browse-grid"></div>
     </section>
     {% endif %}
-    {% if sites.sto %}
-    <section class="browse-section" data-row="popular_series" data-sites="sto">
-      <h2 class="browse-heading" data-i18n="browse.popular_series">Popular Series</h2>
+    {% if sites.miruro %}
+    <section class="browse-section" data-row="miruro_latest" data-sites="miruro">
+      <h2 class="browse-heading" data-i18n="browse.miruro_latest">Featured on Miruro</h2>
       <div class="browse-grid"></div>
     </section>
     {% endif %}
-    {% if sites.megakino %}
-    <section class="browse-section" data-row="popular_movies" data-sites="megakino">
-      <h2 class="browse-heading" data-i18n="browse.popular_movies">Popular Movies</h2>
+    {% if sites.reanime %}
+    <section class="browse-section" data-row="reanime_latest" data-sites="reanime">
+      <h2 class="browse-heading" data-i18n="browse.reanime_latest">Latest on Re:Anime</h2>
       <div class="browse-grid"></div>
     </section>
-    {% endif %}
-    {% if sites.kinox %}
-    <section class="browse-section" data-row="kinox_movies" data-sites="kinox">
-      <h2 class="browse-heading" data-i18n="browse.new_movies">New Movies</h2>
-      <div class="browse-grid"></div>
-    </section>
-    {% endif %}
-    {% if sites.filmpalast %}
-    <section class="browse-section" data-row="filmpalast_movies" data-sites="filmpalast">
-      <h2 class="browse-heading" data-i18n="browse.new_movies">New Movies</h2>
-      <div class="browse-grid"></div>
-    </section>
-    {% endif %}
-    {% if sites.filmo %}
-    <section class="browse-section" data-row="filmo_movies" data-sites="filmo">
-      <h2 class="browse-heading" data-i18n="browse.new_movies">New Movies</h2>
-      <div class="browse-grid"></div>
-    </section>
-    {% endif %}
-    {% if sites.burningseries %}
-    <section class="browse-section" data-row="burningseries_series" data-sites="burningseries">
-      <h2 class="browse-heading" data-i18n="browse.recent_series">Recently Updated</h2>
-      <div class="browse-grid"></div>
-    </section>
-    {% endif %}
-    {% if sites.moflix %}
-    <section class="browse-section" data-row="moflix_movies" data-sites="moflix">
-      <h2 class="browse-heading" data-i18n="browse.new_movies">New Movies</h2>
-      <div class="browse-grid"></div>
-    </section>
-    {% endif %}
-    {% if sites.mangafire %}
-    <section class="browse-section" data-row="mangafire_trending" data-sites="mangafire">
-      <h2 class="browse-heading" data-i18n="browse.trending_manga">Trending Manga</h2>
-      <div class="browse-grid"></div>
-    </section>
-    {% endif %}
-    {% if sites.htv %}
-    <section class="browse-section" data-row="htv_trending" data-sites="htv">
-      <h2 class="browse-heading" data-i18n="browse.trending_hentai">Trending</h2>
+    <section class="browse-section" data-row="reanime_trending" data-sites="reanime">
+      <h2 class="browse-heading" data-i18n="browse.reanime_trending">Trending on Re:Anime</h2>
       <div class="browse-grid"></div>
     </section>
     {% endif %}
   </div>
 </div>
 
+<div class="overlay" id="discoverOverlay" data-close-on-backdrop hidden>
+  <div class="modal discover-modal" role="dialog" aria-modal="true" aria-label="Anime details"
+    data-i18n-aria-label="index.discover_dialog">
+    <button class="modal-close" data-discover-close aria-label="Close"
+      data-i18n-aria-label="common.close">&times;</button>
+    <div class="discover-body" id="discoverBody"></div>
+  </div>
+</div>
+
 <div class="overlay" id="seriesOverlay" data-close-on-backdrop>
-  <div class="modal">
-    <button class="modal-close" data-close-modal aria-label="Close">&times;</button>
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Title details"
+    data-i18n-aria-label="index.series_dialog">
+    <button class="modal-close" data-close-modal aria-label="Close"
+      data-i18n-aria-label="common.close">&times;</button>
 
     <!-- Shown until the title, seasons and first episode list are all in -->
     <div class="skeleton-view" id="seriesLoading" aria-live="polite" aria-busy="true">
@@ -203,18 +185,6 @@
         </label>
       </div>
 
-      <div class="control-row" id="mangaFireRow" hidden>
-        <label class="field">
-          <span class="field-label" data-i18n="index.format">Format</span>
-          <select id="mangaFireFormat">
-            <option value="jpg">JPG (Images)</option>
-            <option value="cbz">CBZ (Archive)</option>
-            <option value="epub">EPUB (Ebook)</option>
-          </select>
-          <span class="hint" data-i18n="index.manga_format_hint">CBZ and EPUB use available volumes, otherwise chapters. Changing format resets the page selection.</span>
-        </label>
-      </div>
-
       <div class="control-row" id="customPathRow" hidden>
         <label class="field">
           <span class="field-label" data-i18n="index.download_folder">Download Folder</span>
@@ -258,19 +228,15 @@
   {{ {
     "SITE_LANGUAGES": {
       "aniworld": lang_labels.values() | list,
-      "sto": sto_lang_labels.values() | list,
-      "megakino": megakino_lang_labels.values() | list,
-      "kinox": ["German Dub", "English Dub"],
-      "burningseries": ["German Dub", "English Dub"],
-      "filmpalast": ["German Dub", "English Dub"],
-      "moflix": ["German Dub"],
-      "filmo": ["German Dub", "English Dub"]
+      "nineanime": ["English Sub", "English Dub"],
+      "miruro": ["English Sub", "English Dub"],
+      "reanime": ["English Sub", "English Dub"]
     },
     "DEFAULT_LANGUAGE": default_language,
     "SHOW_ALL_LANGUAGES": show_all_languages,
     "ENGLISH_SUB_DISABLED": english_sub_disabled,
     "GENRE_SITES": genre_sites | list,
-    "AUTOSYNC_ENABLED": autosync_enabled and is_admin,
+    "AUTOSYNC_ENABLED": false,
     "STATIC_PROVIDERS": supported_providers | list
   } | tojson }}
 </script>
@@ -280,5 +246,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='home.js') }}?v={{ app_version }}"></script>
+<script src="{{ url_for('static', filename='home.js') }}?v={{ static_version }}"></script>
 {% endblock %}

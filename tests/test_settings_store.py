@@ -18,9 +18,6 @@ def test_defaults_of_a_fresh_install():
     assert settings["lang_separation"] is False
     assert settings["disable_english_sub"] is False
     assert settings["show_all_languages"] is False
-    assert settings["enable_htv"] is False
-    assert settings["enable_burningseries"] is False
-    assert settings["enable_kinox"] is False
     assert settings["enable_library"] is True, "the library is on unless turned off"
     assert settings["enable_autosync"] is False
     assert settings["movie_folder"] is True
@@ -51,14 +48,9 @@ def test_read_settings_never_leaks_the_discord_token(monkeypatch):
         ("lang_separation", "ANIWORLD_LANG_SEPARATION"),
         ("disable_english_sub", "ANIWORLD_DISABLE_ENGLISH_SUB"),
         ("show_all_languages", "ANIWORLD_SHOW_ALL_LANGUAGES"),
-        ("enable_htv", "ANIWORLD_ENABLE_HTV"),
-        ("enable_burningseries", "ANIWORLD_ENABLE_BURNINGSERIES"),
-        ("enable_kinox", "ANIWORLD_ENABLE_KINOX"),
         ("enable_library", "ANIWORLD_ENABLE_LIBRARY"),
         ("enable_autosync", "ANIWORLD_ENABLE_AUTOSYNC"),
         ("enable_aniworld", "ANIWORLD_ENABLE_ANIWORLD"),
-        ("enable_sto", "ANIWORLD_ENABLE_STO"),
-        ("enable_mangafire", "ANIWORLD_ENABLE_MANGAFIRE"),
         ("movie_folder", "ANIWORLD_MOVIE_FOLDER"),
     ],
 )
@@ -94,31 +86,22 @@ def test_which_sites_a_fresh_install_shows():
     """Sites requiring opt-in stay off."""
     assert settings_store.enabled_sites() == {
         "aniworld": True,
-        "sto": True,
-        "megakino": True,
-        "mangafire": True,
-        "htv": False,
-        "hentaitv": False,
-        "hentaihaven": False,
-        "kinox": False,
-        "burningseries": False,
-        "filmpalast": True,
-        "filmo": True,
-        "moflix": True,
+        "nineanime": True,
+        "miruro": True,
+        "reanime": True,
     }
 
 
 def test_a_site_reads_back_out_of_the_settings():
-    update_settings({"enable_megakino": False})
+    update_settings({"enable_miruro": False})
     settings = settings_store.read_settings()
-    assert settings["enable_megakino"] is False
+    assert settings["enable_miruro"] is False
     assert settings["enable_aniworld"] is True
 
 
 def test_the_page_is_told_which_sites_exist():
     sites = settings_store.read_settings()["available_sites"]
     assert {site["key"] for site in sites} == set(settings_store.enabled_sites())
-    assert {"key": "kinox", "label": "Kinox", "default_on": False} in sites
     assert {"key": "aniworld", "label": "AniWorld", "default_on": True} in sites
 
 
@@ -152,11 +135,9 @@ def test_an_unrelated_setting_still_saves_with_every_site_off(monkeypatch):
 
 
 def test_the_old_helpers_still_answer():
-    """pages.py and the templates were built on these three."""
-    update_settings({"enable_htv": True, "enable_kinox": True})
-    assert settings_store.htv_enabled() is True
-    assert settings_store.kinox_enabled() is True
-    assert settings_store.burningseries_enabled() is False
+    """pages.py and the templates were built on these two."""
+    update_settings({"enable_nineanime": False})
+    assert settings_store.site_enabled("nineanime") is False
 
 
 def test_an_unknown_site_is_never_enabled():
@@ -262,20 +243,20 @@ def test_a_hand_edited_env_never_breaks_the_worker(monkeypatch, key, value):
 
 @pytest.mark.parametrize("truthy", [True, 1, "yes", "0", [1]])
 def test_anything_truthy_turns_a_toggle_on(truthy):
-    update_settings({"enable_htv": truthy})
-    assert settings_store.htv_enabled() is True
+    update_settings({"enable_nineanime": truthy})
+    assert settings_store.site_enabled("nineanime") is True
 
 
 @pytest.mark.parametrize("falsy", [False, 0, "", None, []])
 def test_anything_falsy_turns_a_toggle_off(falsy):
-    update_settings({"enable_htv": True})
-    update_settings({"enable_htv": falsy})
-    assert settings_store.htv_enabled() is False
+    update_settings({"enable_nineanime": True})
+    update_settings({"enable_nineanime": falsy})
+    assert settings_store.site_enabled("nineanime") is False
 
 
 def test_untouched_settings_are_left_alone():
-    update_settings({"enable_htv": True, "lang_separation": True})
-    update_settings({"enable_htv": False})
+    update_settings({"enable_nineanime": True, "lang_separation": True})
+    update_settings({"enable_nineanime": False})
     assert settings_store.read_settings()["lang_separation"] is True
 
 
@@ -413,8 +394,8 @@ def test_a_rejected_order_changes_nothing():
 def test_a_rejected_field_does_not_apply_the_valid_ones():
     """update_settings validates everything before writing anything."""
     with pytest.raises(SettingsError):
-        update_settings({"enable_htv": True, "ui_language": "klingon"})
-    assert settings_store.htv_enabled() is False
+        update_settings({"lang_separation": True, "output_format": "webm"})
+    assert settings_store.read_settings()["lang_separation"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -456,7 +437,7 @@ def test_discord_settings_round_trip():
 
 
 def test_other_settings_do_not_report_a_discord_change():
-    assert update_settings({"enable_htv": True}) is False
+    assert update_settings({"enable_nineanime": True}) is False
 
 
 def test_the_placeholder_does_not_overwrite_the_token():
@@ -515,9 +496,10 @@ def test_discord_settings_are_written_to_the_env_file():
 def test_other_settings_are_not_written_to_the_env_file():
     from aniworld.config import ANIWORLD_CONFIG_DIR
 
-    update_settings({"enable_htv": True, "ui_language": "de"})
+    update_settings({"lang_separation": True, "disable_english_sub": True})
     written = (ANIWORLD_CONFIG_DIR / ".env").read_text(encoding="utf-8")
-    assert "ANIWORLD_ENABLE_HTV=1" not in written
+    assert "ANIWORLD_LANG_SEPARATION=1" not in written
+    assert os.environ["ANIWORLD_LANG_SEPARATION"] == "1"
 
 
 # ---------------------------------------------------------------------------
@@ -586,20 +568,12 @@ def test_the_preview_is_built_by_the_downloader_itself(monkeypatch, tmp_path):
     assert settings_store.preview_paths()["episode"] == str(real._episode_path)
 
 
-def test_a_movie_lands_where_the_movie_sites_put_it(monkeypatch, tmp_path):
-    """FilmPalast builds a movie path its own way, and this has to match it."""
-    from aniworld.models.filmpalast_to.episode import FilmPalastEpisode
-
+def test_preview_paths_include_a_movie_and_an_episode(monkeypatch, tmp_path):
+    """The settings page preview shows where movie and episode downloads land."""
     monkeypatch.setenv("ANIWORLD_DOWNLOAD_PATH", str(tmp_path))
-    real = FilmPalastEpisode(
-        url="https://filmpalast.to/stream/your-name", selected_path=str(tmp_path)
-    )
-    # seed what the page would have given, so nothing is fetched
-    real._FilmPalastEpisode__title_de = "Your Name"
-    real._FilmPalastEpisode__release_year = "2016"
-    assert real.title_cleaned == "Your Name", "the seeding still works"
-
-    assert settings_store.preview_paths()["movie"] == str(real._episode_path)
+    preview = settings_store.preview_paths(str(tmp_path))
+    assert preview["movie"].endswith(f"{tmp_path}" + os.sep + "Your Name (2016)" + os.sep + "Your Name (2016).mkv")
+    assert preview["episode"].startswith(str(tmp_path))
 
 
 def test_a_movie_does_not_use_the_template(monkeypatch, tmp_path):

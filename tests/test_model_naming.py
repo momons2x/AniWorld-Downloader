@@ -1,26 +1,20 @@
-"""MegaKino and Moflix use full templates and reuse their legacy paths."""
+"""Moflix uses full templates and reuses its legacy paths."""
 
 import pytest
 
-from aniworld.models.megakino import MegaKinoEpisode
 from aniworld.models.moflix_stream.series import MoflixEpisode
 
 
-@pytest.fixture(params=[MegaKinoEpisode, MoflixEpisode])
+@pytest.fixture(params=[MoflixEpisode])
 def model(request, monkeypatch, tmp_path):
     cls = request.param
     monkeypatch.setattr(cls, "title_cleaned", "Example")
     monkeypatch.setattr(cls, "release_year", "2024")
     monkeypatch.setattr(cls, "is_series", True)
     monkeypatch.setenv("ANIWORLD_MOVIE_FOLDER", "1")
-    if cls is MegaKinoEpisode:
-        url = "https://megakino.example/serials/123-example.html#mkep=3"
-        season = "01"
-        legacy = tmp_path / "Example" / "Example - E03.mkv"
-    else:
-        url = "https://moflix-stream.xyz/titles/42/season/2/episodes/3"
-        season = "02"
-        legacy = tmp_path / "Example (2024)" / "Season 2" / "Example (2024) S2E3.mkv"
+    url = "https://moflix-stream.xyz/titles/42/season/2/episodes/3"
+    season = "02"
+    legacy = tmp_path / "Example (2024)" / "Season 2" / "Example (2024) S2E3.mkv"
 
     return cls(url, selected_path=str(tmp_path)), season, legacy
 

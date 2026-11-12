@@ -188,7 +188,8 @@ def test_a_plain_user_cannot_read_settings(auth_client, plain_user):
 def test_a_plain_user_cannot_change_settings(auth_client, plain_user):
     login(auth_client, "bob")
     assert (
-        auth_client.put("/api/settings", json={"enable_htv": True}).status_code == 403
+        auth_client.put("/api/settings", json={"enable_nineanime": True}).status_code
+        == 403
     )
 
 

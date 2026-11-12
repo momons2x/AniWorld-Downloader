@@ -8,70 +8,37 @@ come back.
 import re
 
 from ..logger import get_logger
+from ..models.miruro._api import query_animes as query_miruro
+from ..models.nineanime._api import query_animes as query_nineanime
+from ..models.reanime._api import query_animes as query_reanime
 from ..search import (
     fetch_aniworld_genres,
-    fetch_burningseries_genres,
-    fetch_filmo_genres,
-    fetch_filmpalast_genres,
-    fetch_hanime_genres,
-    fetch_kinox_genres,
-    fetch_mangafire_genres,
-    fetch_megakino_genres,
-    fetch_moflix_genres,
-    fetch_s_to_genres,
     query_aniworld,
-    query_burningseries,
-    query_filmo,
-    query_filmpalast,
-    query_hanime,
-    query_hentai_tv,
-    query_hentaihaven,
-    query_kinox,
-    query_mangafire,
-    query_megakino,
-    query_moflix,
-    query_s_to,
 )
 
 logger = get_logger(__name__)
 
+# Each site searches through its own model package; the functions all return
+# [{title, url, poster_url}] so the normaliser below can pass them straight on.
 SITE_SEARCH = {
-    "moflix": query_moflix,
     "aniworld": query_aniworld,
-    "sto": query_s_to,
-    "megakino": query_megakino,
-    "kinox": query_kinox,
-    "filmpalast": query_filmpalast,
-    "filmo": query_filmo,
-    "burningseries": query_burningseries,
-    "mangafire": query_mangafire,
-    "htv": query_hanime,
-    "hentaitv": query_hentai_tv,
-    "hentaihaven": query_hentaihaven,
+    "nineanime": query_nineanime,
+    "miruro": query_miruro,
+    "reanime": query_reanime,
 }
 
-# aniworld/serienstream return relative `/.../<slug>` links, everything else
-# returns an absolute `url`. These two also need series-only filtering.
+# Aniworld returns relative `/.../<slug>` links, everything else returns an
+# absolute `url`. This one also needs series-only filtering.
 _RELATIVE_SITES = {
     "aniworld": (
         "https://aniworld.to",
         re.compile(r"^/anime/stream/[a-zA-Z0-9\-]+/?$", re.IGNORECASE),
     ),
-    "sto": (
-        "https://serienstream.to",
-        re.compile(r"^/serie/(stream/)?[a-zA-Z0-9\-]+/?$", re.IGNORECASE),
-    ),
 }
 
-_ABSOLUTE_BASES = {"mangafire": "https://mangafire.to"}
-
-# hanime results are identified by a slug instead of a link of any kind.
-_SLUG_URLS = {"htv": "https://hanime.tv/videos/hentai/{slug}"}
-
-# Sites checked for a Discord request, in priority order. Kinox carries both
-# movies and series, so it appears in both lists.
-SERIES_SITES = ("sto", "burningseries", "aniworld", "kinox", "moflix")
-MOVIE_SITES = ("megakino", "filmpalast", "filmo", "kinox", "moflix")
+# Sites checked for a Discord request, in priority order.
+SERIES_SITES = ("miruro", "reanime")
+MOVIE_SITES = ()
 
 
 def sites_for(media_type):
@@ -130,15 +97,8 @@ def search(site, keyword, *, raise_errors=False):
 
 
 def _resolve_url(site, item):
-    slug_url = _SLUG_URLS.get(site)
-    if slug_url and item.get("slug"):
-        return slug_url.format(slug=item["slug"])
-
     url = item.get("url")
     if url:
-        base = _ABSOLUTE_BASES.get(site)
-        if base and not url.startswith("http"):
-            return base + url
         return url
 
     link = item.get("link")
@@ -154,15 +114,6 @@ def _resolve_url(site, item):
 # Every site whose genre listing the Web UI can offer.
 GENRE_LISTS = {
     "aniworld": fetch_aniworld_genres,
-    "sto": fetch_s_to_genres,
-    "burningseries": fetch_burningseries_genres,
-    "megakino": fetch_megakino_genres,
-    "kinox": fetch_kinox_genres,
-    "filmpalast": fetch_filmpalast_genres,
-    "filmo": fetch_filmo_genres,
-    "htv": fetch_hanime_genres,
-    "mangafire": fetch_mangafire_genres,
-    "moflix": fetch_moflix_genres,
 }
 
 GENRE_SITES = tuple(GENRE_LISTS)
@@ -170,17 +121,7 @@ GENRE_SITES = tuple(GENRE_LISTS)
 # AniWorld is missing here on purpose: the site pages its own genre listing, so
 # it goes through fetch_genre_animes(). Everything else returns one flat list
 # that limit cuts off, and the caller slices it into pages.
-GENRE_QUERIES = {
-    "sto": lambda genre, limit: query_s_to(genre=genre, limit=limit),
-    "burningseries": lambda genre, limit: query_burningseries(genre=genre, limit=limit),
-    "megakino": lambda genre, limit: query_megakino(genre=genre, limit=limit),
-    "kinox": lambda genre, limit: query_kinox(genre=genre, limit=limit),
-    "filmpalast": lambda genre, limit: query_filmpalast(genre=genre, limit=limit),
-    "filmo": lambda genre, limit: query_filmo(genre=genre, limit=limit),
-    "htv": lambda genre, limit: query_hanime(genre=genre, limit=limit),
-    "mangafire": lambda genre, limit: query_mangafire(genre=genre, limit=limit),
-    "moflix": lambda genre, limit: query_moflix(genre=genre, limit=limit),
-}
+GENRE_QUERIES = {}
 
 
 def genres(site):
@@ -193,9 +134,9 @@ def genre_results(site, genre, limit):
     """Browse one site's genre, normalised like a search result.
 
     Returns (results, has_more). The flag counts the site's own hits, before
-    normalising drops the ones the app cannot open afterwards: serienstream
-    lists the odd title under a slug no provider pattern accepts, and a single
-    one of those would otherwise read as the end of the listing.
+    normalising drops the ones the app cannot open afterwards: a site listing
+    the odd title under a slug no provider pattern accepts would otherwise
+    read as the end of the listing.
 
     Failures propagate on purpose: an empty genre is worth telling apart from a
     site that would not answer, which a browse row cannot do.

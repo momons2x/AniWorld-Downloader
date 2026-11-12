@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ ui_language }}">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8" />
@@ -16,15 +16,15 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"
     integrity="sha384-qrALq7+6jBOZIQsNnT6xGkMDru64qD6uTlDra39xrt2SoXl4pO3FX6Roz/RpR/BS" crossorigin="anonymous"
     referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ app_version }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ static_version }}" />
   {# ?nocss=1 is the way back in when a theme hides the settings page #}
   {% if custom_css_version and request.args.get('nocss') != '1' %}
   <link rel="stylesheet" data-custom-css href="{{ url_for('pages.custom_css') }}?v={{ custom_css_version }}" />
   {% endif %}
   <script>
-    window.UI_LANGUAGE = {{ ui_language | tojson }};
+    window.UI_LANGUAGE = "en";
   </script>
-  <script src="{{ url_for('static', filename='i18n.js') }}?v={{ app_version }}"></script>
+  <script src="{{ url_for('static', filename='i18n.js') }}?v={{ static_version }}"></script>
   {% block head %}{% endblock %}
 </head>
 
@@ -98,10 +98,10 @@
 
   <div class="toast" id="toast" role="status"></div>
 
-  <script src="{{ url_for('static', filename='common.js') }}?v={{ app_version }}"></script>
-  <script src="{{ url_for('static', filename='queue-badge.js') }}?v={{ app_version }}"></script>
+  <script src="{{ url_for('static', filename='common.js') }}?v={{ static_version }}"></script>
+  <script src="{{ url_for('static', filename='queue-badge.js') }}?v={{ static_version }}"></script>
   {% if custom_shader_version and request.args.get('nocss') != '1' %}
-  <script src="{{ url_for('static', filename='shader.js') }}?v={{ app_version }}" defer></script>
+  <script src="{{ url_for('static', filename='shader.js') }}?v={{ static_version }}" defer></script>
   {% endif %}
   {% block scripts %}{% endblock %}
 </body>

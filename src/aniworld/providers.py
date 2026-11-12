@@ -5,57 +5,27 @@ from re import Pattern
 from urllib.parse import urlparse, urlunparse
 
 from .config import (
-    ANIME_ID_HENTAI_EPISODE_PATTERN,
-    ANIWORLD_EPISODE_PATTERN,
-    ANIWORLD_SEASON_PATTERN,
-    ANIWORLD_SERIES_PATTERN,
-    BURNINGSERIES_EPISODE_PATTERN,
-    BURNINGSERIES_SEASON_PATTERN,
-    BURNINGSERIES_SERIES_PATTERN,
-    FILMPALAST_SERIES_PATTERN,
-    HANIME_TV_SERIES_PATTERN,
-    HENTAI_HAVEN_EPISODE_PATTERN,
-    HENTAI_HAVEN_SERIES_PATTERN,
-    HENTAI_TV_EPISODE_PATTERN,
-    KINOX_SERIES_PATTERN,
-    MANGA_FIRE_CHAPTER_PATTERN,
-    MANGA_FIRE_SERIES_PATTERN,
-    MEGAKINO_SERIES_PATTERN,
-    MOFLIX_SERIES_PATTERN,
-    SERIENSTREAM_EPISODE_PATTERN,
-    SERIENSTREAM_SEASON_PATTERN,
-    SERIENSTREAM_SERIES_PATTERN,
+    MIRURO_EPISODE_PATTERN,
+    MIRURO_SEASON_PATTERN,
+    MIRURO_SERIES_PATTERN,
+    NINEANIME_EPISODE_PATTERN,
+    NINEANIME_SEASON_PATTERN,
+    NINEANIME_SERIES_PATTERN,
+    REANIME_EPISODE_PATTERN,
+    REANIME_SEASON_PATTERN,
+    REANIME_SERIES_PATTERN,
 )
 from .models import (
-    AnimeIDHentaiEpisode,
-    AniworldEpisode,
-    AniworldSeason,
-    AniworldSeries,
-    BurningSeriesEpisode,
-    BurningSeriesSeason,
-    BurningSeriesSeries,
-    FilmoEpisode,
-    FilmPalastEpisode,
-    HanimeTVEpisode,
-    HanimeTVSeason,
-    HanimeTVSeries,
-    HentaiHavenEpisode,
-    HentaiHavenSeries,
-    HentaiTVEpisode,
-    KinoxEpisode,
-    KinoxSeason,
-    KinoxSeries,
-    MangaFireToChapter,
-    MangaFireToSeries,
-    MegaKinoEpisode,
-    MoflixEpisode,
-    MoflixSeason,
-    SerienstreamEpisode,
-    SerienstreamSeason,
-    SerienstreamSeries,
+    MiruroEpisode,
+    MiruroSeason,
+    MiruroSeries,
+    NineAnimeEpisode,
+    NineAnimeSeason,
+    NineAnimeSeries,
+    ReanimeEpisode,
+    ReanimeSeason,
+    ReanimeSeries,
 )
-from .models.filmo_to.episode import FILMO_EPISODE_PATTERN
-from .models.moflix_stream.http import normalize_url as normalize_moflix_url
 
 
 @dataclass(frozen=True)
@@ -72,106 +42,31 @@ class Provider:
 
 PROVIDERS = [
     Provider(
-        name="HentaiTV",
-        episode_pattern=HENTAI_TV_EPISODE_PATTERN,
-        episode_cls=HentaiTVEpisode,
+        name="Miruro",
+        series_pattern=MIRURO_SERIES_PATTERN,
+        season_pattern=MIRURO_SEASON_PATTERN,
+        episode_pattern=MIRURO_EPISODE_PATTERN,
+        series_cls=MiruroSeries,
+        season_cls=MiruroSeason,
+        episode_cls=MiruroEpisode,
     ),
     Provider(
-        name="AnimeIDHentai",
-        episode_pattern=ANIME_ID_HENTAI_EPISODE_PATTERN,
-        episode_cls=AnimeIDHentaiEpisode,
+        name="ReAnime",
+        series_pattern=REANIME_SERIES_PATTERN,
+        season_pattern=REANIME_SEASON_PATTERN,
+        episode_pattern=REANIME_EPISODE_PATTERN,
+        series_cls=ReanimeSeries,
+        season_cls=ReanimeSeason,
+        episode_cls=ReanimeEpisode,
     ),
     Provider(
-        name="HentaiHaven",
-        series_pattern=HENTAI_HAVEN_SERIES_PATTERN,
-        episode_pattern=HENTAI_HAVEN_EPISODE_PATTERN,
-        series_cls=HentaiHavenSeries,
-        episode_cls=HentaiHavenEpisode,
-    ),
-    Provider(
-        name="AniWorld",
-        series_pattern=ANIWORLD_SERIES_PATTERN,
-        season_pattern=ANIWORLD_SEASON_PATTERN,
-        episode_pattern=ANIWORLD_EPISODE_PATTERN,
-        series_cls=AniworldSeries,
-        season_cls=AniworldSeason,
-        episode_cls=AniworldEpisode,
-    ),
-    Provider(
-        name="HanimeTV",
-        series_pattern=HANIME_TV_SERIES_PATTERN,
-        episode_pattern=HANIME_TV_SERIES_PATTERN,
-        series_cls=HanimeTVSeries,
-        season_cls=HanimeTVSeason,
-        episode_cls=HanimeTVEpisode,
-    ),
-    Provider(
-        name="MegaKino",
-        series_pattern=MEGAKINO_SERIES_PATTERN,
-        series_cls=MegaKinoEpisode,
-        season_cls=None,
-        episode_cls=MegaKinoEpisode,
-    ),
-    Provider(
-        name="Filmo",
-        episode_pattern=FILMO_EPISODE_PATTERN,
-        # A movie page is the whole title, so it stands in as its own series the
-        # way MegaKino and FilmPalast do. No series_pattern: the CLI keeps
-        # treating the URL as an episode, only the web UI asks for the series.
-        series_cls=FilmoEpisode,
-        season_cls=None,
-        episode_cls=FilmoEpisode,
-    ),
-    Provider(
-        name="FilmPalast",
-        series_pattern=FILMPALAST_SERIES_PATTERN,
-        series_cls=FilmPalastEpisode,
-        season_cls=None,
-        episode_cls=FilmPalastEpisode,
-    ),
-    Provider(
-        name="Kinox",
-        series_pattern=KINOX_SERIES_PATTERN,
-        season_pattern=KINOX_SERIES_PATTERN,
-        episode_pattern=KINOX_SERIES_PATTERN,
-        series_cls=KinoxSeries,
-        season_cls=KinoxSeason,
-        episode_cls=KinoxEpisode,
-    ),
-    Provider(
-        name="BurningSeries",
-        series_pattern=BURNINGSERIES_SERIES_PATTERN,
-        season_pattern=BURNINGSERIES_SEASON_PATTERN,
-        episode_pattern=BURNINGSERIES_EPISODE_PATTERN,
-        series_cls=BurningSeriesSeries,
-        season_cls=BurningSeriesSeason,
-        episode_cls=BurningSeriesEpisode,
-    ),
-    Provider(
-        name="MangaFire",
-        series_pattern=MANGA_FIRE_SERIES_PATTERN,
-        season_pattern=MANGA_FIRE_CHAPTER_PATTERN,
-        episode_pattern=MANGA_FIRE_CHAPTER_PATTERN,
-        series_cls=MangaFireToSeries,
-        season_cls=MangaFireToChapter,
-        episode_cls=MangaFireToChapter,
-    ),
-    Provider(
-        name="SerienStream",
-        series_pattern=SERIENSTREAM_SERIES_PATTERN,
-        season_pattern=SERIENSTREAM_SEASON_PATTERN,
-        episode_pattern=SERIENSTREAM_EPISODE_PATTERN,
-        series_cls=SerienstreamSeries,
-        season_cls=SerienstreamSeason,
-        episode_cls=SerienstreamEpisode,
-    ),
-    Provider(
-        name="Moflix",
-        series_pattern=MOFLIX_SERIES_PATTERN,
-        episode_pattern=MOFLIX_SERIES_PATTERN,
-        series_cls=MoflixEpisode,
-        season_cls=MoflixSeason,
-        episode_cls=MoflixEpisode,
+        name="9anime",
+        series_pattern=NINEANIME_SERIES_PATTERN,
+        season_pattern=NINEANIME_SEASON_PATTERN,
+        episode_pattern=NINEANIME_EPISODE_PATTERN,
+        series_cls=NineAnimeSeries,
+        season_cls=NineAnimeSeason,
+        episode_cls=NineAnimeEpisode,
     ),
 ]
 
@@ -181,22 +76,8 @@ def normalize_url(url: str) -> str:
         return url
 
     url = url.strip()
-    if MOFLIX_SERIES_PATTERN.fullmatch(url):
-        return normalize_moflix_url(url)
-
     parsed = urlparse(url)
-    path = parsed.path
-
-    # --- SerienStream alias handling ---
-    # Some endpoints use /serie/stream/<slug>; normalize to /serie/<slug>.
-    if path.startswith("/serie/stream/"):
-        slug = path[len("/serie/stream/") :].strip("/")
-        if slug:
-            path = f"/serie/{slug}"
-
-    # remove trailing slash
-    path = path.rstrip("/")
-
+    path = parsed.path.rstrip("/")
     return urlunparse(parsed._replace(path=path))
 
 

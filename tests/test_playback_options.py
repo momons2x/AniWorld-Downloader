@@ -5,10 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from aniworld import autodeps, entry
-from aniworld.models import HanimeTVEpisode
 from aniworld.models.common import common
-from aniworld.models.mangafire_to.series import MangaFireToChapter
-from aniworld.web import media
 
 
 @pytest.mark.parametrize("action", ["watch", "syncplay"])
@@ -92,22 +89,3 @@ def test_syncplay_uses_mpv_without_overwriting_player_preferences(monkeypatch, c
     assert command[command.index("--room") + 1] == "my-room"
     assert "private-room-key" not in caplog.text
     assert "private-room-key" not in command
-
-
-def test_hanime_cli_video_url_selects_one_video():
-    obj = entry.model_for_url("https://hanime.tv/videos/hentai/example-1")
-    assert isinstance(obj, HanimeTVEpisode)
-
-
-def test_mangafire_format_setting_controls_model_and_web_ui(monkeypatch):
-    monkeypatch.setenv("ANIWORLD_MANGAFIRE_FORMAT", "cbz")
-    chapter = MangaFireToChapter(
-        "https://mangafire.to/title/z9w-velvet-kisss/chapter/1",
-        chapter_id=5484330,
-        chapter_number=1,
-    )
-    assert chapter.mangafire_format == media.mangafire_format() == "cbz"
-    explicit = MangaFireToChapter(
-        chapter.chapter_url, chapter_id=5484330, chapter_number=1, format="jpg"
-    )
-    assert explicit.mangafire_format == "jpg"

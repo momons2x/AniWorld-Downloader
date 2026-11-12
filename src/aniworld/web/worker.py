@@ -11,7 +11,6 @@ import time
 from ..logger import get_logger
 from ..providers import normalize_url, resolve_provider
 from . import db, paths
-from .media import mangafire_format
 
 logger = get_logger(__name__)
 
@@ -78,7 +77,6 @@ def _episode_request(entry):
         extra["selected_pages"] = entry["selected_pages"]
     if entry.get("series_url"):
         extra["_series_url"] = entry["series_url"]
-    extra["_format"] = entry.get("mangafire_format", mangafire_format())
     return url, extra
 
 
@@ -92,17 +90,14 @@ def _build_episode(url, extra, item, selected_path):
     }
 
     series = None
-    if provider.name == "MangaFire":
-        series_url = extra.get("_series_url") or url.rstrip("/").rsplit("/", 2)[0]
-        series_url = normalize_url(series_url)
+    if extra.get("_series_url"):
+        series_url = normalize_url(extra["_series_url"])
         try:
             series = provider.series_cls(url=series_url)
         except Exception:
             series = None
-        kwargs["format"] = extra["_format"]
 
-    # MegaKino episodes build their own series context internally
-    if series is not None and provider.name != "MegaKino":
+    if series is not None:
         kwargs["series"] = series
     if "selected_pages" in extra:
         kwargs["selected_pages"] = extra["selected_pages"]

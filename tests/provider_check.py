@@ -5,14 +5,7 @@ this helper, and Ruff checks the scripts without contacting providers.
 
 One file per source site lives next to this one:
 
-    tests/test_providers_aniworld.py       tests/test_providers_kinox.py
-    tests/test_providers_serienstream.py   tests/test_providers_burningseries.py
-    tests/test_providers_megakino.py
-    tests/test_providers_filmo.py          tests/test_providers_moflix.py
-    tests/test_providers_filmpalast.py     tests/test_providers_hanimetv.py
-    tests/test_providers_mangafire.py
-    tests/test_providers_hentaitv.py       tests/test_providers_animeidhentai.py
-    tests/test_providers_hentaihaven.py
+    tests/test_providers_aniworld.py
 
 and one that checks the hosters on their own, independent of any site:
 
@@ -296,13 +289,12 @@ def run_site(site_name, fetch_name, only=None):
 def run_stream_site(site_name, fetch_name, keyword=None):
     """For a site that owns its stream resolution instead of using a hoster.
 
-    HanimeTV is its own extractor: the episode resolves a stream itself rather
-    than pointing at VOE or Doodstream, so walking a hoster map would report
-    "no hosters" and prove nothing.
+    The site resolves its stream itself rather than pointing at VOE or
+    Doodstream, so walking a hoster map would report "no hosters" and prove
+    nothing.
     """
     from aniworld import search
 
-    registry = extractors()
     results = []
 
     print(f"\n=== {site_name} ===\n")
@@ -328,16 +320,9 @@ def run_stream_site(site_name, fetch_name, keyword=None):
     line(status, f"{site_name} stream", detail, took)
     results.append(status)
 
-    if site_name == "HanimeTV" and "hanime_tv" in registry:
-        status, detail, took = check(
-            "preview", registry["hanime_tv"]["preview"], site_url
-        )
-        line(status, f"{site_name} preview", detail, took)
-        results.append(status)
-    else:
-        status, detail, took = check("poster", lambda _: episode.poster_url, site_url)
-        line(status, f"{site_name} poster", detail, took)
-        results.append(status)
+    status, detail, took = check("poster", lambda _: episode.poster_url, site_url)
+    line(status, f"{site_name} poster", detail, took)
+    results.append(status)
     return report(results)
 
 
@@ -429,17 +414,6 @@ def run_hosters(only=None):
         line(status, f"{name} preview", detail, took)
         results.append(status)
     return report(results)
-
-
-def hanime_trending():
-    """Hanime's trending feed, shaped like the other browse fetchers."""
-    from aniworld.extractors.provider.hanime_tv import fetch_hanime_trending
-
-    return [
-        {"url": f"https://hanime.tv/videos/hentai/{hit['slug']}"}
-        for hit in (fetch_hanime_trending() or [])
-        if hit.get("slug")
-    ]
 
 
 def mangafire_sample():

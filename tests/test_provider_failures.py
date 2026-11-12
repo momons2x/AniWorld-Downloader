@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, Mock
 import pytest
 
 from aniworld.extractors.provider import voe
-from aniworld.models.s_to import episode as sto
 from aniworld.playwright import captcha
 
 
@@ -116,25 +115,6 @@ def test_missing_chromium_error_survives_modal_solver(monkeypatch, tmp_path):
     monkeypatch.setattr(sync_api, "sync_playwright", playwright)
     monkeypatch.setattr(autodeps, "_ensure_xvfb", Mock())
     with pytest.raises(RuntimeError, match="python -m patchright install chromium"):
-        captcha.solve_sto_modal(
-            "https://serienstream.to/serie/example/staffel-1/episode-1",
-            "VOE",
-            "Deutsch",
-        )
+        captcha.solve_captcha(url=tmp_path)
     runtime.chromium.launch.assert_not_called()
     runtime.chromium.launch_persistent_context.assert_not_called()
-
-
-def test_failed_modal_does_not_cache_serienstream_url(monkeypatch):
-    episode = sto.SerienstreamEpisode(
-        "https://serienstream.to/serie/example/staffel-1/episode-1"
-    )
-    redirect = "https://serienstream.to/r?t=example"
-    monkeypatch.setattr(sto.SerienstreamEpisode, "provider_link", lambda *a: redirect)
-    monkeypatch.setattr(sto, "sto_get", lambda *a: SimpleNamespace(url=redirect))
-    solve = Mock(return_value=None)
-    monkeypatch.setattr(captcha, "solve_sto_modal", solve)
-    for _ in range(2):
-        with pytest.raises(ValueError, match="Failed to resolve provider URL"):
-            _ = episode.stream_url
-    assert solve.call_count == 2

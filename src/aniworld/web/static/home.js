@@ -13,14 +13,24 @@
   const genreList = el("genreList");
   const genreMore = el("genreMore");
   const genreMoreBtn = el("genreMoreBtn");
+  const myAnimeMode = el("myAnimeMode");
+  const myAnimeModeList = el("myAnimeModeList");
+  const discoverControls = el("discoverControls");
+  const discoverKindList = el("discoverKindList");
+  const discoverGenreBar = el("discoverGenreBar");
+  const discoverGenreList = el("discoverGenreList");
+  const discoverTagBar = el("discoverTagBar");
+  const discoverTagList = el("discoverTagList");
+  const discoverMore = el("discoverMore");
+  const discoverMoreBtn = el("discoverMoreBtn");
+  const discoverOverlay = el("discoverOverlay");
+  const discoverBody = el("discoverBody");
 
   const seriesOverlay = el("seriesOverlay");
   const seriesLoading = el("seriesLoading");
   const seriesContent = el("seriesContent");
   const languageSelect = el("languageSelect");
   const providerSelect = el("providerSelect");
-  const languageProviderRow = el("languageProviderRow");
-  const mangaFireRow = el("mangaFireRow");
   const customPathRow = el("customPathRow");
   const customPathSelect = el("customPathSelect");
   const autosyncRow = el("autosyncRow");
@@ -34,32 +44,30 @@
   const thumb = el("segmentedThumb");
   const siteButtons = Array.from(document.querySelectorAll(".segmented-btn"));
 
+  // With only one site enabled the tab bar is just decoration, tuck it away
+  if (siteButtons.length <= 1) {
+    const siteSwitch = el("siteSwitch");
+    if (siteSwitch) siteSwitch.hidden = true;
+  }
+
   // Browse rows are cached per process on the server, refresh occasionally here
   const BROWSE_REFRESH_MS = 300000;
-  // Browser verification can take longer than a normal HTTP request.
-  const MOFLIX_TIMEOUT_MS = 120000;
+  // Provider scrapes get more headroom than the shared apiFetch default.
+  const SCRAPE_TIMEOUT_MS = 60000;
 
   const SEARCH_PLACEHOLDERS = {
     aniworld: "Search AniWorld...",
-    sto: "Search SerienStream...",
-    burningseries: "Search BurningSeries...",
-    megakino: "Search MegaKino...",
-    moflix: "Search Moflix...",
-    kinox: "Search Kinox...",
-    filmpalast: "Search FilmPalast...",
-    filmo: "Search Filmo...",
-    htv: "Search Hanime...",
-    hentaitv: "Search HentaiTV...",
-    hentaihaven: "Search HentaiHaven...",
-    mangafire: "Search MangaFire..."
+    nineanime: "Search 9anime...",
+    miruro: "Search Miruro...",
+    reanime: "Search Re:Anime...",
+    local: "Search your anime..."
   };
 
   const LANGUAGE_BADGES = {
-    "German Dub": { flags: ["de"], text: "Dub", css: "badge-german-dub" },
-    "German Sub": { flags: ["jp", "de"], text: "Sub", css: "badge-german-sub" },
-    "English Dub": { flags: ["gb"], text: "Dub", css: "badge-english-dub" },
     "English Sub": { flags: ["jp", "gb"], text: "Sub", css: "badge-english-sub" },
-    Japanese: { flags: ["jp"], text: "Dub", css: "badge-german-dub" }
+    "English Dub": { flags: ["gb"], text: "Dub", css: "badge-english-dub" },
+    "Indonesian Sub": { flags: ["jp"], text: "Sub", css: "badge-english-sub" },
+    Japanese: { flags: ["jp"], text: "Dub", css: "badge-english-dub" }
   };
 
   // Any site can be switched off in the settings, so the page opens on the
@@ -70,6 +78,187 @@
   let downloadedFolders = [];
   let customPaths = [];
 
+  /* ===== My Anime (local library + AniList discovery) ===== */
+  const DISCOVER_GENRES = [
+    "Action", "Adventure", "Comedy", "Drama", "Ecchi", "Fantasy",
+    "Horror", "Mahou Shoujo", "Mecha", "Music", "Mystery", "Psychological",
+    "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Thriller"
+  ];
+  const DISCOVER_TAGS = [
+    "Isekai", "Reincarnation", "Detective", "Vampire", "Zombie", "Cyberpunk",
+    "Female Protagonist", "Male Protagonist", "Super Power", "Space",
+    "Survival", "Dystopian", "Post-Apocalyptic", "Tragedy", "Military",
+    "School", "Magic", "Historical", "Educational", "Found Family", "Gore",
+    "Boys' Love", "Yuri", "Cute Girls Doing Cute Things", "Otaku Culture",
+    "Cosplay", "Idol", "Food", "Travel", "Photography", "School Club",
+    "Martial Arts", "Boxing", "Cycling", "Baseball", "Football", "Tennis",
+    "Swimming", "Camping", "Fishing", "Astronomy", "Writing", "Fashion",
+    "Robots", "Artificial Intelligence", "Gambling", "Shogi", "Poker",
+    "Mafia", "Yakuza", "Religion", "Cult"
+  ];
+  let localLocations = [];
+  let localEntries = [];
+  let localGenre = "";
+  let localLoading = false;
+  let localMode = "library";
+  const localMetaPending = new Set();
+
+  const discover = { kind: "trending", genre: "", tag: "", page: 1, hasNext: false, loading: false };
+
+  const isLocalSite = () => currentSite === "local";
+  const isDiscoverMode = () => currentSite === "local" && localMode === "discover";
+
+  function localLocationQuery(location) {
+    if (!location) return "";
+    const params = new URLSearchParams();
+    if (location.custom_path_id) params.set("path_id", location.custom_path_id);
+    if (location.lang_folder) params.set("lang_folder", location.lang_folder);
+    return params.toString();
+  }
+
+  function localLocationName(location) {
+    return location.lang_folder
+      ? `${location.label} / ${location.lang_folder}`
+      : location.label;
+  }
+
+  function localWatchUrl(entry) {
+    const params = new URLSearchParams({ folder: entry.folder });
+    if (entry.location && entry.location.custom_path_id) {
+      params.set("path_id", entry.location.custom_path_id);
+    }
+    if (entry.location && entry.location.lang_folder) {
+      params.set("lang_folder", entry.location.lang_folder);
+    }
+    return `/library/watch?${params.toString()}`;
+  }
+
+  function localAllGenres() {
+    const genres = new Set();
+    localEntries.forEach((entry) => {
+      (entry.genres || []).forEach((genre) => genre && genres.add(genre));
+    });
+    return Array.from(genres).sort((a, b) => a.localeCompare(b));
+  }
+
+  function renderLocalGenres() {
+    const genres = localAllGenres();
+    genreBar.hidden = !genres.length;
+    if (!genres.length) return;
+    genreList.innerHTML = genres
+      .map(
+        (genre) =>
+          `<button type="button" class="genre-chip" role="listitem" data-genre="${esc(genre)}">${esc(genre)}</button>`
+      )
+      .join("");
+    genreList.querySelectorAll(".genre-chip").forEach((chip) => {
+      chip.classList.toggle("active", chip.dataset.genre === localGenre);
+    });
+  }
+
+  function localMatches(entry) {
+    const query = searchInput.value.trim().toLowerCase();
+    const haystack = [
+      entry.folder,
+      entry.title,
+      (entry.genres || []).join(" "),
+      localLocationName(entry.location)
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return (!query || haystack.includes(query)) &&
+      (!localGenre || (entry.genres || []).includes(localGenre));
+  }
+
+  function renderLocalAnime() {
+    const filtered = localEntries
+      .filter(localMatches)
+      .sort((a, b) => a.title.localeCompare(b.title));
+    if (!filtered.length) {
+      resultsGrid.innerHTML = `<div class="empty-state">${t("index.no_results", "No results found.")}</div>`;
+      return;
+    }
+    resultsGrid.innerHTML = filtered
+      .map((entry) => {
+        const title = entry.title || entry.folder;
+        const subtitle = (entry.genres || []).length
+          ? entry.genres.slice(0, 2).join(", ")
+          : localLocationName(entry.location);
+        const metaLine = [entry.year, entry.score ? `★ ${entry.score}` : ""]
+          .filter(Boolean)
+          .join(" · ");
+        return `
+          <div class="poster-card" data-watch-url="${esc(localWatchUrl(entry))}">
+            <span class="downloaded-badge">&#10003;</span>
+            <img src="${esc(entry.poster_url || "")}" alt="" loading="lazy" onerror="this.style.display='none'" />
+            <div class="info">
+              <div class="title" title="${esc(title)}">${esc(title)}</div>
+              ${subtitle ? `<div class="subtitle">${esc(subtitle)}</div>` : ""}
+              ${metaLine ? `<div class="subtitle">${esc(metaLine)}</div>` : ""}
+            </div>
+          </div>`;
+      })
+      .join("");
+  }
+
+  async function fetchLocalMeta(entry) {
+    if (localMetaPending.has(entry.folder)) return;
+    if (entry.genres && entry.genres.length && entry.poster_url) return;
+    localMetaPending.add(entry.folder);
+    try {
+      const query = localLocationQuery(entry.location);
+      const data = await apiFetch(
+        `/api/library/meta?folder=${encodeURIComponent(entry.folder)}${query ? `&${query}` : ""}`
+      );
+      if (data && (data.title_en || data.title_romaji || data.cover || data.genres?.length)) {
+        entry.title = data.title_en || data.title_romaji || entry.title;
+        entry.poster_url = entry.poster_url || data.cover || "";
+        entry.genres = data.genres || entry.genres || [];
+        entry.year = entry.year || data.year || null;
+        entry.score = entry.score ?? data.score ?? null;
+        if (currentSite === "local") {
+          renderLocalGenres();
+          renderLocalAnime();
+        }
+      }
+    } catch (e) {
+      /* the folder name is enough while AniList is unavailable */
+    } finally {
+      localMetaPending.delete(entry.folder);
+    }
+  }
+
+  async function loadLocalAnime() {
+    if (localLoading && localEntries.length) return;
+    localLoading = true;
+    try {
+      const locationsData = await apiFetch("/api/library/locations");
+      localLocations = locationsData.locations || [];
+      const perLocation = await Promise.all(
+        localLocations.map(async (location) => {
+          try {
+            const query = localLocationQuery(location);
+            const data = await apiFetch(`/api/library/titles?${query}`);
+            return { location, titles: data.titles || [] };
+          } catch (e) {
+            return { location, titles: [] };
+          }
+        })
+      );
+      localEntries = perLocation.flatMap(({ location, titles }) =>
+        titles.map((title) => ({ ...title, location }))
+      );
+      renderLocalGenres();
+      renderLocalAnime();
+      localEntries.forEach((entry) => fetchLocalMeta(entry));
+    } catch (error) {
+      resultsGrid.innerHTML = `<div class="empty-state" role="alert">${esc(error.message)}</div>`;
+    } finally {
+      localLoading = false;
+    }
+  }
+
   // Open series state
   let openToken = 0;
   let seriesUrl = "";
@@ -79,25 +268,6 @@
   let episodeLoads = {};
   let availableProviders = null;
 
-  // Sites that stream from their own player with a single track, so there is
-  // no language or hoster to choose
-  const FIXED_STREAMS = {
-    "hanime.tv": { language: "Japanese", provider: "HanimeTV" },
-    "hentai.tv": { language: "English Sub", provider: "HentaiTV" },
-    "hentaihaven.xxx": { language: "English Sub", provider: "HentaiHaven" }
-  };
-
-  function fixedStream(url) {
-    try {
-      return FIXED_STREAMS[new URL(url).hostname.replace(/^www\./, "")] || null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  const isMangaFire = (url) => url.includes("mangafire.to/");
-
-  /* ===== Site switch ===== */
   function moveThumb() {
     const active = siteButtons.find((btn) => btn.classList.contains("active"));
     if (!active || !thumb) return;
@@ -117,6 +287,16 @@
     resultsGrid.innerHTML = "";
     searchInput.value = "";
     resetGenre();
+    if (site === "local") {
+      localGenre = "";
+      browse.hidden = true;
+      genreMore.hidden = true;
+      if (myAnimeMode) myAnimeMode.hidden = false;
+      syncLocalMode();
+      return;
+    }
+    if (myAnimeMode) myAnimeMode.hidden = true;
+    discoverControls.hidden = true;
     updateGenreBar();
     showBrowseRows();
   }
@@ -158,7 +338,7 @@
     }
 
     state.pending = apiFetch(`/api/${key.replace(/_/g, "-")}`, {
-      timeoutMs: key === "moflix_movies" ? MOFLIX_TIMEOUT_MS : undefined
+      timeoutMs: SCRAPE_TIMEOUT_MS
     })
       .then((data) => {
         state.loadedAt = Date.now();
@@ -241,7 +421,16 @@
   }
 
   document.addEventListener("click", (event) => {
+    const discoverCard = event.target.closest("[data-anilist]");
+    if (discoverCard && isDiscoverMode()) {
+      openDiscoverDetails(Number(discoverCard.dataset.anilist));
+      return;
+    }
     const card = event.target.closest(".poster-card");
+    if (card && card.dataset.watchUrl) {
+      window.location.href = card.dataset.watchUrl;
+      return;
+    }
     if (card && card.dataset.url) openSeries(card.dataset.url);
   });
 
@@ -258,6 +447,16 @@
 
   function updateGenreBar() {
     genreList.innerHTML = "";
+    if (isLocalSite()) {
+      if (isDiscoverMode()) {
+        discoverGenreBar.hidden = true;
+        renderDiscoverGenres();
+      } else {
+        discoverGenreBar.hidden = true;
+        renderLocalGenres();
+      }
+      return;
+    }
     genreBar.hidden = !(window.GENRE_SITES || []).includes(currentSite);
     if (!genreBar.hidden) loadGenres(currentSite);
   }
@@ -312,6 +511,27 @@
   genreList.addEventListener("click", (event) => {
     const chip = event.target.closest(".genre-chip");
     if (!chip) return;
+    if (chip.dataset.kind) {
+      discover.kind = chip.dataset.kind;
+      discover.page = 1;
+      discoverKindList
+        .querySelectorAll(".genre-chip")
+        .forEach((item) => item.classList.toggle("active", item === chip));
+      loadDiscover(true);
+      return;
+    }
+    if (isLocalSite()) {
+      if (isDiscoverMode()) {
+        discover.genre = discover.genre === chip.dataset.genre ? "" : chip.dataset.genre;
+        renderDiscoverGenres();
+        loadDiscover(true);
+        return;
+      }
+      localGenre = localGenre === chip.dataset.genre ? "" : chip.dataset.genre;
+      renderLocalGenres();
+      renderLocalAnime();
+      return;
+    }
     // clicking the open genre again goes back to the browse rows
     if (chip.dataset.slug === activeGenre) {
       clearGenre();
@@ -340,14 +560,14 @@
     try {
       const data = await apiFetch(
         `/api/genre?site=${encodeURIComponent(site)}` +
-          `&slug=${encodeURIComponent(slug)}&page=${page}`
+          `&slug=${encodeURIComponent(slug)}&page=${page}`,
+        { timeoutMs: SCRAPE_TIMEOUT_MS }
       );
       // a slow page 1 can land after the user already picked another genre
       if (slug !== activeGenre || site !== activeGenreSite) return;
       genrePage = page;
       genreItems = genreItems.concat(data.results || []);
       renderCards(resultsGrid, genreItems);
-      // serienstream and burningseries list no posters, fill them in per card
       loadMissingPosters();
       genreMore.hidden = !data.has_more;
     } catch (error) {
@@ -362,6 +582,15 @@
 
   /* ===== Search ===== */
   async function doSearch() {
+    if (isDiscoverMode()) {
+      discover.page = 1;
+      loadDiscover(true);
+      return;
+    }
+    if (isLocalSite()) {
+      renderLocalAnime();
+      return;
+    }
     const keyword = searchInput.value.trim();
     // submitting an empty box is the way back out of a search
     if (!keyword) {
@@ -379,9 +608,9 @@
     browse.hidden = true;
 
     try {
-      const data = await apiSend("/api/search", "POST", { keyword, site: currentSite }, {
-        timeoutMs: currentSite === "moflix" ? MOFLIX_TIMEOUT_MS : undefined
-      });
+    const data = await apiSend("/api/search", "POST", { keyword, site: currentSite }, {
+      timeoutMs: SCRAPE_TIMEOUT_MS
+    });
       renderCards(resultsGrid, data.results || []);
       loadMissingPosters();
     } catch (error) {
@@ -392,9 +621,9 @@
     }
   }
 
-  // serienstream and burningseries give no posters, fetch them per card. One
-  // request per card is enough of a round trip to keep the answers around: a
-  // genre's "Load more" re-renders every card that is already on screen.
+  // Some sites give no posters, fetch them per card. One request per card is
+  // enough of a round trip to keep the answers around: a genre's "Load more"
+  // re-renders every card that is already on screen.
   const posterCache = {};
 
   function loadMissingPosters() {
@@ -407,7 +636,9 @@
         return;
       }
       try {
-        const data = await apiFetch(`/api/series?url=${encodeURIComponent(url)}`);
+        const data = await apiFetch(`/api/series?url=${encodeURIComponent(url)}`, {
+          timeoutMs: SCRAPE_TIMEOUT_MS
+        });
         if (data.poster_url) {
           posterCache[url] = data.poster_url;
           image.src = data.poster_url;
@@ -422,11 +653,21 @@
   searchInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") doSearch();
   });
+  searchInput.addEventListener("input", () => {
+    if (isDiscoverMode()) {
+      discover.page = 1;
+      loadDiscover(true);
+    } else if (isLocalSite()) {
+      renderLocalAnime();
+    }
+  });
 
   randomBtn.addEventListener("click", async () => {
     randomBtn.disabled = true;
     try {
-      const data = await apiFetch(`/api/random?site=${currentSite}`);
+      const data = await apiFetch(`/api/random?site=${currentSite}`, {
+        timeoutMs: SCRAPE_TIMEOUT_MS
+      });
       openSeries(data.url);
     } catch (error) {
       showToast(error.message);
@@ -512,10 +753,8 @@
     const forLanguage = availableProviders && availableProviders[languageSelect.value];
     if (forLanguage && forLanguage.length) {
       fillProviderSelect(forLanguage);
-    } else if (!["megakino", "moflix"].includes(currentSite)) {
-      fillProviderSelect(window.STATIC_PROVIDERS);
     } else {
-      providerSelect.innerHTML = "";
+      fillProviderSelect(window.STATIC_PROVIDERS);
     }
   }
 
@@ -539,7 +778,9 @@
 
   async function fetchProviders(episodeUrl) {
     try {
-      const data = await apiFetch(`/api/providers?url=${encodeURIComponent(episodeUrl)}`);
+      const data = await apiFetch(`/api/providers?url=${encodeURIComponent(episodeUrl)}`, {
+        timeoutMs: SCRAPE_TIMEOUT_MS
+      });
       availableProviders = data.providers || null;
       restrictLanguages();
       updateProviderSelect();
@@ -558,21 +799,15 @@
     showSkeleton(true);
     openModal("seriesOverlay");
 
-    const fixed = fixedStream(url);
-    const manga = isMangaFire(url);
-    languageProviderRow.hidden = Boolean(fixed) || manga;
-    mangaFireRow.hidden = !manga;
-    if (!fixed && !manga) {
-      rebuildLanguageOptions();
-      fillProviderSelect(["megakino", "moflix"].includes(currentSite) ? [] : window.STATIC_PROVIDERS);
-    }
+    rebuildLanguageOptions();
+    fillProviderSelect(window.STATIC_PROVIDERS);
     loadCustomPaths();
     loadAutosyncExclusion(url);
 
     try {
       const [series, seasonData] = await Promise.all([
-        apiFetch(`/api/series?url=${encodeURIComponent(url)}`),
-        apiFetch(`/api/seasons?url=${encodeURIComponent(url)}${manga ? `&mangafire_format=${encodeURIComponent(el("mangaFireFormat").value)}` : ""}`)
+        apiFetch(`/api/series?url=${encodeURIComponent(url)}`, { timeoutMs: SCRAPE_TIMEOUT_MS }),
+        apiFetch(`/api/seasons?url=${encodeURIComponent(url)}`, { timeoutMs: SCRAPE_TIMEOUT_MS })
       ]);
       if (token !== openToken) return;
 
@@ -590,7 +825,7 @@
 
       // The provider probe narrows the language/provider selects, so resolve it
       // before revealing or the dropdowns would visibly change afterwards
-      if (firstEpisodes.length && !fixed && !manga) {
+      if (firstEpisodes.length && !fixed) {
         await fetchProviders(firstEpisodes[0].url);
         if (token !== openToken) return;
       }
@@ -607,10 +842,6 @@
       showToast(`${t("index.load_failed", "Failed to load title")}: ${error.message}`);
     }
   }
-
-  el("mangaFireFormat").addEventListener("change", () => {
-    if (isMangaFire(seriesUrl)) openSeries(seriesUrl);
-  });
 
   // Only meaningful for aniworld titles, that is all Auto-Sync looks at
   async function loadAutosyncExclusion(url) {
@@ -650,10 +881,6 @@
 
   function seasonLabel(season, count) {
     const shown = typeof count === "number" ? count : season.episode_count;
-    if (currentSite === "mangafire") {
-      const label = season.is_volume ? t("index.volume", "Volume") : t("index.chapter", "Chapter");
-      return `${label} ${season.season_number}`;
-    }
     const name = season.are_movies
       ? t("index.movies", "Movies")
       : `${t("index.season", "Season")} ${season.season_number}`;
@@ -691,8 +918,7 @@
 
   function episodesUrl(season) {
     let url = `/api/episodes?url=${encodeURIComponent(season.url || seriesUrl)}`;
-    // HanimeTV seasons carry no URL of their own, and MangaFire needs the series
-    if (!season.url || currentSite === "mangafire") {
+    if (!season.url) {
       url += `&series_url=${encodeURIComponent(seriesUrl)}`;
     }
     return url;
@@ -706,7 +932,7 @@
     const body = el(`seasonBody-${index}`);
     if (!season || !body) return Promise.resolve([]);
 
-    episodeLoads[index] = apiFetch(episodesUrl(season))
+    episodeLoads[index] = apiFetch(episodesUrl(season), { timeoutMs: SCRAPE_TIMEOUT_MS })
       .then((data) => {
         if (token !== openToken) return [];
         const episodes = data.episodes || [];
@@ -754,27 +980,19 @@
       return;
     }
 
-    const manga = currentSite === "mangafire";
     body.innerHTML = episodes
       .map((episode) => {
-        const name = manga
-          ? `${t("index.page", "Page")} ${episode.page_number}`
-          : episode.title_en || episode.title_de;
+        const name = episode.title_en;
         const title = name
           ? `<span class="ep-title">${esc(name)}</span>`
           : `<span class="ep-title ep-title-missing">${t("index.not_available", "[Not available]")}</span>`;
         const done = episode.downloaded ? '<span class="ep-done">&#10003;</span>' : "";
-        const value = manga
-          ? `${episode.chapter_url || episode.url}##${episode.page_number}`
-          : episode.url;
-        const extra = manga
-          ? ` data-chapter-url="${esc(episode.chapter_url || episode.url)}" data-page="${episode.page_number}"`
-          : "";
+        const value = episode.url;
 
         return `
           <div class="episode-item">
-            <input type="checkbox" value="${esc(value)}" data-season="${index}"${extra} />
-            <span class="ep-num">${manga ? "P" : "E"}${episode.episode_number}</span>
+            <input type="checkbox" value="${esc(value)}" data-season="${index}" />
+            <span class="ep-num">E${episode.episode_number}</span>
             ${done}
             <div class="ep-main">${title}${renderBadges(episode.available_languages)}</div>
           </div>`;
@@ -853,22 +1071,7 @@
 
   function collectEpisodes(all) {
     const boxes = Array.from(accordion.querySelectorAll(selector(all)));
-    if (currentSite !== "mangafire") return boxes.map((box) => box.value);
-
-    // MangaFire downloads native chapters or volumes with a page selection
-    const chapters = new Map();
-    boxes.forEach((box) => {
-      const chapter = box.dataset.chapterUrl;
-      const page = Number(box.dataset.page || 0);
-      if (!chapter || !page) return;
-      if (!chapters.has(chapter)) chapters.set(chapter, new Set());
-      chapters.get(chapter).add(page);
-    });
-    return Array.from(chapters.entries()).map(([url, pages]) => ({
-      url,
-      series_url: seriesUrl,
-      selected_pages: Array.from(pages).sort((a, b) => a - b)
-    }));
+    return boxes.map((box) => box.value);
   }
 
   async function startDownload(all) {
@@ -888,16 +1091,13 @@
       return;
     }
 
-    const fixed = fixedStream(seriesUrl);
-    const manga = isMangaFire(seriesUrl);
     const body = {
       episodes,
       title: seriesTitle,
       series_url: seriesUrl,
-      language: fixed ? fixed.language : manga ? "MangaFire" : languageSelect.value,
-      provider: fixed ? fixed.provider : manga ? "MangaFire" : providerSelect.value
+      language: languageSelect.value,
+      provider: providerSelect.value
     };
-    if (manga) body.mangafire_format = el("mangaFireFormat").value;
     if (customPathSelect.value) body.custom_path_id = Number(customPathSelect.value);
 
     downloadAllBtn.disabled = true;
@@ -929,4 +1129,262 @@
   loadDownloadedFolders().then(() => {
     switchSite(firstSite());
   });
+
+  /* ===== My Anime: Discover (AniList) =====
+     The local tab has two modes. "Library" shows your downloads (parsed from
+     /api/library/*); "Discover" browses the AniList catalogue and hands the
+     download off to the providers you already use. */
+  function syncLocalMode() {
+    if (myAnimeMode) myAnimeMode.hidden = !isLocalSite();
+    myAnimeModeList
+      .querySelectorAll("[data-mode]")
+      .forEach((btn) => btn.classList.toggle("active", btn.dataset.mode === localMode));
+    discoverKindList
+      .querySelectorAll("[data-kind]")
+      .forEach((btn) => btn.classList.toggle("active", btn.dataset.kind === discover.kind));
+    discoverControls.hidden = !(isLocalSite() && localMode === "discover");
+    document.body.classList.toggle("discover-mode", isDiscoverMode());
+    if (isDiscoverMode()) {
+      discoverGenreBar.hidden = !DISCOVER_GENRES.length;
+      renderDiscoverGenres();
+      renderDiscoverTags();
+      loadDiscover(true);
+    } else {
+      discoverGenreBar.hidden = true;
+      discoverTagBar.hidden = true;
+      discoverMore.hidden = true;
+      loadLocalAnime();
+    }
+  }
+
+  myAnimeModeList.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-mode]");
+    if (!btn || !isLocalSite()) return;
+    localMode = btn.dataset.mode;
+    syncLocalMode();
+  });
+
+  discoverKindList.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-kind]");
+    if (!btn || !isDiscoverMode()) return;
+    discover.kind = btn.dataset.kind;
+    discover.page = 1;
+    discoverKindList
+      .querySelectorAll("[data-kind]")
+      .forEach((item) => item.classList.toggle("active", item === btn));
+    loadDiscover(true);
+  });
+
+  discoverGenreList.addEventListener("click", (event) => {
+    const chip = event.target.closest(".genre-chip");
+    if (!chip || !isDiscoverMode()) return;
+    discover.genre = discover.genre === chip.dataset.genre ? "" : chip.dataset.genre;
+    renderDiscoverGenres();
+    discover.page = 1;
+    loadDiscover(true);
+  });
+
+  discoverTagList.addEventListener("click", (event) => {
+    const chip = event.target.closest(".genre-chip");
+    if (!chip || !isDiscoverMode()) return;
+    discover.tag = discover.tag === chip.dataset.tag ? "" : chip.dataset.tag;
+    renderDiscoverTags();
+    discover.page = 1;
+    loadDiscover(true);
+  });
+
+  function renderDiscoverGenres() {
+    if (!isDiscoverMode()) return;
+    const genres = DISCOVER_GENRES;
+    discoverGenreBar.hidden = !genres.length;
+    discoverGenreList.innerHTML = genres
+      .map(
+        (genre) =>
+          `<button type="button" class="genre-chip" role="listitem" data-genre="${esc(genre)}">${esc(genre)}</button>`
+      )
+      .join("");
+    discoverGenreList
+      .querySelectorAll(".genre-chip")
+      .forEach((chip) => chip.classList.toggle("active", chip.dataset.genre === discover.genre));
+  }
+
+  function renderDiscoverTags() {
+    if (!isDiscoverMode()) return;
+    discoverTagBar.hidden = !DISCOVER_TAGS.length;
+    discoverTagList.innerHTML = DISCOVER_TAGS.map(
+      (tag) =>
+        `<button type="button" class="genre-chip" role="listitem" data-tag="${esc(tag)}">${esc(tag)}</button>`
+    ).join("");
+    discoverTagList
+      .querySelectorAll(".genre-chip")
+      .forEach((chip) => chip.classList.toggle("active", chip.dataset.tag === discover.tag));
+  }
+
+  function discoverCard(item) {
+    const title = item.title || item.title_romaji || "";
+    const meta = [item.year, item.score ? `★ ${item.score}` : ""]
+      .filter(Boolean)
+      .join(" · ");
+    const subtitle = (item.genres || []).slice(0, 2).join(", ");
+    return `
+      <div class="poster-card" data-anilist="${item.anilist_id}">
+        <img src="${esc(item.cover || "")}" alt="" loading="lazy" onerror="this.style.display='none'" />
+        <div class="info">
+          <div class="title" title="${esc(title)}">${esc(title)}</div>
+          ${subtitle ? `<div class="subtitle">${esc(subtitle)}</div>` : ""}
+          ${meta ? `<div class="subtitle">${esc(meta)}</div>` : ""}
+        </div>
+      </div>`;
+  }
+
+  async function loadDiscover(reset) {
+    if (discover.loading) return;
+    discover.loading = true;
+    if (reset) {
+      discover.page = 1;
+      discover.items = [];
+      resultsGrid.innerHTML = `<div class="empty-state">${t("common.loading", "Loading...")}</div>`;
+      discoverMore.hidden = true;
+    }
+    discoverMoreBtn.disabled = true;
+    const params = new URLSearchParams({
+      kind: discover.kind,
+      page: String(discover.page),
+    });
+    if (discover.genre) params.set("genre", discover.genre);
+    if (discover.tag) params.set("tag", discover.tag);
+    const query = searchInput.value.trim();
+    if (query) params.set("q", query);
+    try {
+      const data = await apiFetch(`/api/discover?${params.toString()}`);
+      const before = discover.items.length;
+      discover.items = discover.items.concat(data.results || []);
+      discover.hasNext = Boolean(data.has_next);
+      discover.page = Number(data.page || discover.page) + (data.has_next ? 1 : 0);
+      if (!discover.items.length) {
+        resultsGrid.innerHTML = `<div class="empty-state">${t("index.no_results", "No results found.")}</div>`;
+      } else if (reset) {
+        resultsGrid.innerHTML = `<div class="browse-grid">${discover.items.map(discoverCard).join("")}</div>`;
+      } else {
+        const fresh = discover.items.slice(before);
+        const grid = resultsGrid.querySelector(".browse-grid");
+        if (grid) {
+          grid.insertAdjacentHTML("beforeend", fresh.map(discoverCard).join(""));
+        } else {
+          resultsGrid.innerHTML = `<div class="browse-grid">${discover.items.map(discoverCard).join("")}</div>`;
+        }
+      }
+      discoverMore.hidden = !discover.hasNext;
+    } catch (error) {
+      if (reset) {
+        resultsGrid.innerHTML = `<div class="empty-state" role="alert">${esc(error.message)}</div>`;
+        discoverMore.hidden = true;
+      }
+    } finally {
+      discover.loading = false;
+      discoverMoreBtn.disabled = false;
+    }
+  }
+
+  discoverMoreBtn.addEventListener("click", () => loadDiscover(false));
+
+  /* ===== Discover details + provider bridge ===== */
+  function openDiscoverDetails(anilistId) {
+    discoverBody.innerHTML = `<div class="empty-state">${t("common.loading", "Loading...")}</div>`;
+    openModal("discoverOverlay");
+    apiFetch(`/api/discover/anime/${anilistId}`)
+      .then((item) => renderDiscoverDetails(item))
+      .catch((error) => {
+        discoverBody.textContent = error.message;
+      });
+  }
+
+  function renderDiscoverDetails(item) {
+    const title = item.title || item.title_romaji || "";
+    const metaLine = [
+      item.year,
+      item.format,
+      item.status ? String(item.status).toLowerCase() : "",
+      item.score ? `★ ${item.score}` : "",
+      item.episodes ? `${item.episodes} ${t("library.episodes", "ep")}` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    const providers = Array.from(siteButtons)
+      .filter((btn) => btn.dataset.site !== "local")
+      .map((btn) => btn.dataset.site);
+    const locallyDownloaded = isDownloaded(title);
+    discoverBody.innerHTML = `
+      <div class="series-header">
+        <img id="discoverPoster" alt="" ${item.cover ? `src="${esc(item.cover)}"` : ""} />
+        <div class="series-meta">
+          <h2>${esc(title)}</h2>
+          <div class="series-genres">${esc((item.genres || []).join(", "))}</div>
+          <div class="series-year">${esc(metaLine)}</div>
+          <div class="series-desc">${esc(item.description || "")}</div>
+        </div>
+      </div>
+      <div class="control-row">
+        <span class="field-label">${t("index.provider", "Provider")}</span>
+        <div class="genre-list">
+          ${providers
+            .map(
+              (site) =>
+                `<button type="button" class="genre-chip" data-provider="${esc(site)}">${esc(site)}</button>`
+            )
+            .join("")}
+        </div>
+      </div>
+      <div class="modal-actions">
+        ${locallyDownloaded ? `<button class="btn btn-secondary" data-discover-watch>${t("myanime.watch_library", "Watch in library")}</button>` : ""}
+        <button class="btn btn-primary" data-discover-download>${t("index.download_selected", "Download")}</button>
+      </div>`;
+    const providerBtns = discoverBody.querySelectorAll("[data-provider]");
+    let chosen = providerBtns.length ? providerBtns[0].dataset.provider : null;
+    providerBtns.forEach((btn, index) => {
+      btn.classList.toggle("active", index === 0);
+      btn.addEventListener("click", () => {
+        providerBtns.forEach((item) => item.classList.remove("active"));
+        btn.classList.add("active");
+        chosen = btn.dataset.provider;
+      });
+    });
+    const watchBtn = discoverBody.querySelector("[data-discover-watch]");
+    if (watchBtn) {
+      watchBtn.addEventListener("click", () => {
+        window.location.href = `/library?folder=${encodeURIComponent(title)}`;
+      });
+    }
+    discoverBody.querySelector("[data-discover-download]").addEventListener("click", async () => {
+      if (!chosen) {
+        showToast(t("myanime.pick_provider", "Pick a provider first"));
+        return;
+      }
+      const downloadBtn = discoverBody.querySelector("[data-discover-download]");
+      downloadBtn.disabled = true;
+      try {
+        const data = await apiSend("/api/search", "POST", { keyword: title, site: chosen }, {
+          timeoutMs: SCRAPE_TIMEOUT_MS
+        });
+        const results = data.results || [];
+        const target =
+          results.find((r) => (r.title || "").toLowerCase() === title.toLowerCase()) ||
+          results[0];
+        if (!target) throw new Error(t("myanime.no_results", "No results on this site."));
+        closeModal("discoverOverlay");
+        await openSeries(target.url);
+      } catch (error) {
+        showToast(`${t("myanime.search_failed", "That provider did not answer")}: ${error.message}`);
+      } finally {
+        downloadBtn.disabled = false;
+      }
+    });
+  }
+
+  discoverOverlay.addEventListener("click", (event) => {
+    if (event.target.closest("[data-discover-close]") || event.target === discoverOverlay) {
+      closeModal("discoverOverlay");
+    }
+  });
 })();
+

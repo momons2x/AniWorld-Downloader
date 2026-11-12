@@ -29,7 +29,7 @@ services:
 
     # environment:
     # --- General settings (uncomment the environment block to customise) ---
-    #   ANIWORLD_LANGUAGE: "German Dub"               # Default language (German Dub | English Sub | German Sub | English Dub)
+    #   ANIWORLD_LANGUAGE: "English Sub"              # Default language (English Sub | English Dub)
     #   ANIWORLD_PROVIDER: "VOE"                      # Default streaming provider
     #   ANIWORLD_PROVIDER_FALLBACK_ORDER: "VOE,Vidmoly,Vidoza,Doodstream"  # Tried in order after the selected provider fails
     #   ANIWORLD_NAMING_TEMPLATE: "{title} ({year}) [imdbid-{imdbid}]/Season {season}/{title} S{season}E{episode}.mkv"
@@ -37,7 +37,7 @@ services:
     #   ANIWORLD_LANG_SEPARATION: "0"                 # Separate downloads into language subfolders (german-dub/, english-sub/)
     #   ANIWORLD_MOVIE_FOLDER: "1"                    # 1 = wrap a movie in its own "Title (Year)" folder, 0 = save it directly
     #   ANIWORLD_DISABLE_ENGLISH_SUB: "0"             # Block English Sub downloads entirely
-    #   ANIWORLD_UI_LANGUAGE: "en"                    # Web UI language: en | de
+
     #   ANIWORLD_DEBUG_MODE: "0"                      # Enable debug logging
     #   ANIWORLD_NO_AUTO_INSTALL: "0"                 # 1 = never fetch missing dependencies at runtime
     #   ANIWORLD_HLS_CONCURRENCY: "8"                 # Parallel segment downloads for direct HLS downloads
@@ -46,11 +46,8 @@ services:
 
     # --- Features (uncomment the environment block to customise) ---
     #   ANIWORLD_ENABLE_LIBRARY: "1"                  # Library tab: browse and delete downloaded files
-    #   ANIWORLD_ENABLE_HTV: "0"                      # Show the Hanime tab (adult content)
-    #   ANIWORLD_ENABLE_HENTAITV: "0"                 # Show the HentaiTV tab (adult content)
-    #   ANIWORLD_ENABLE_HENTAIHAVEN: "0"              # Show the HentaiHaven tab (adult content)
     #   ANIWORLD_ENABLE_ANIWORLD: "1"                 # Every site has a toggle: ANIWORLD | STO | MEGAKINO |
-    #   ANIWORLD_ENABLE_STO: "1"                      # FILMPALAST | MANGAFIRE | HTV | KINOX | BURNINGSERIES.
+    #   ANIWORLD_ENABLE_STO: "1"                      # FILMPALAST | MANGAFIRE | KINOX | BURNINGSERIES.
     #   ANIWORLD_ENABLE_MEGAKINO: "1"                 # Off means no tab and no rows. At least one has to stay on.
     #   ANIWORLD_ENABLE_FILMPALAST: "1"
     #   ANIWORLD_ENABLE_MANGAFIRE: "1"
@@ -88,7 +85,6 @@ services:
     #   ANIWORLD_DISCORD_MODE: "standard"             # standard = you approve each request, advanced = queued immediately
     #   ANIWORLD_DISCORD_REQUEST_ROLE_ID: ""          # Only this role may request, empty allows everyone
     #   ANIWORLD_DISCORD_GUILD_ID: ""                 # Register slash commands in one server (instant), empty = global
-    #   ANIWORLD_DISCORD_LANGUAGE: "en"               # Bot language: en | de
     #   ANIWORLD_DISCORD_ANNOUNCE_CHANNEL_ID: ""      # Post "now available" here when a requested download finishes
 
     # --- CAPTCHA browser (optional overrides) ---

@@ -217,3 +217,16 @@ __marimo__/
 
 # Docker volume mount
 /Downloads/
+
+# Local media library (downloads live inside the workspace)
+library/
+*.mkv
+*.mp4
+*.avi
+*.srt
+*.ass
+*.vtt
+*.temp_audio.mkv
+*.temp_video.mkv
+*.temp_full.mkv
+*.hlswork*

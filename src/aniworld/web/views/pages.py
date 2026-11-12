@@ -13,14 +13,10 @@ from flask import (
 )
 
 from ...config import ANIWORLD_CONFIG_DIR, LANG_LABELS
-from .. import paths, settings_store, sitesearch, theming
+from .. import settings_store, sitesearch, theming
 from ..media import WORKING_PROVIDERS
 
 bp = Blueprint("pages", __name__)
-
-# Language options per site. AniWorld is the only one with subs.
-STO_LANGUAGES = {"1": "German Dub", "2": "English Dub"}
-MEGAKINO_LANGUAGES = {"1": "German Dub"}
 
 
 @bp.route("/favicon.ico")
@@ -63,8 +59,6 @@ def index():
     return render_template(
         "index.html",
         lang_labels=LANG_LABELS,
-        sto_lang_labels=STO_LANGUAGES,
-        megakino_lang_labels=MEGAKINO_LANGUAGES,
         supported_providers=WORKING_PROVIDERS,
         default_language=settings_store.default_language(),
         show_all_languages=settings_store.show_all_languages(),
@@ -86,13 +80,11 @@ def library():
     return render_template("library.html")
 
 
-@bp.route("/autosync")
-def autosync():
-    if not settings_store.autosync_enabled():
+@bp.route("/library/watch")
+def library_watch():
+    if not settings_store.library_enabled():
         abort(404)
-    return render_template(
-        "autosync.html", lang_separation=paths.lang_separation_enabled()
-    )
+    return render_template("library_watch.html")
 
 
 @bp.route("/settings")

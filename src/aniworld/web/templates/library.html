@@ -6,15 +6,21 @@
 <div class="container container-narrow">
   <div class="page-head">
     <h1 data-i18n="library.title">Library</h1>
-    <button class="btn btn-ghost" id="libraryRefresh" data-i18n="common.refresh">Refresh</button>
+    <div class="page-head-actions">
+      <label class="lib-show-hidden">
+        <input type="checkbox" id="libraryShowHidden" />
+        <span>Show hidden</span>
+      </label>
+      <button class="btn btn-ghost" id="libraryRefresh" data-i18n="common.refresh">Refresh</button>
+    </div>
   </div>
   <p class="page-hint" data-i18n="library.hint">
-    Each folder's series/movie type is read up front; episode files still only load when you open a title.
+    Everything you have downloaded, as a poster wall. Click a card to see its episodes.
   </p>
   <div id="libraryTree" class="library-tree"></div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='library.js') }}?v={{ app_version }}"></script>
+<script src="{{ url_for('static', filename='library.js') }}?v={{ static_version }}"></script>
 {% endblock %}

@@ -1,6 +1,5 @@
 """Shared helpers for turning the downloader's models into JSON for the UI."""
 
-import os
 import re
 from urllib.parse import quote, urlparse
 
@@ -42,60 +41,26 @@ _PROVIDER_BY_LOWER = {p.lower(): p for p in WORKING_PROVIDERS}
 # Site keys the front-end uses. Custom paths can be the default for any of them.
 SITE_KEYS = (
     "aniworld",
-    "sto",
-    "megakino",
-    "mangafire",
-    "htv",
-    "hentaitv",
-    "hentaihaven",
-    "kinox",
-    "burningseries",
-    "filmpalast",
-    "filmo",
-    "moflix",
+    "nineanime",
+    "miruro",
+    "reanime",
 )
 
 SITE_LABELS = {
     "aniworld": "AniWorld",
-    "sto": "SerienStream",
-    "megakino": "MegaKino",
-    "mangafire": "MangaFire",
-    "htv": "Hanime",
-    "hentaitv": "HentaiTV",
-    "hentaihaven": "HentaiHaven",
-    "kinox": "Kinox",
-    "burningseries": "BurningSeries",
-    "filmpalast": "FilmPalast",
-    "filmo": "Filmo",
-    "moflix": "Moflix",
+    "nineanime": "9anime",
+    "miruro": "Miruro",
+    "reanime": "Re:Anime",
 }
 
 # The order the tabs appear in on the home page, which is not the order the
 # keys happen to be declared in above.
 SITE_ORDER = (
     "aniworld",
-    "sto",
-    "burningseries",
-    "megakino",
-    "moflix",
-    "kinox",
-    "filmpalast",
-    "filmo",
-    "htv",
-    "hentaitv",
-    "hentaihaven",
-    "mangafire",
+    "nineanime",
+    "miruro",
+    "reanime",
 )
-
-# Sites nobody gets unless they ask: adult content, or a site that cannot be
-# used without work on the user's side. Every other site starts on.
-SITES_OFF_BY_DEFAULT = frozenset(
-    {"htv", "hentaitv", "hentaihaven", "burningseries", "kinox"}
-)
-
-# Sites that stream from their own player instead of a hoster. Each carries one
-# fixed track, so there is no language or hoster to pick in the UI.
-SELF_HOSTED_LANGUAGES = {"HentaiTV": "English Sub", "HentaiHaven": "English Sub"}
 
 
 def normalize_default_sites(value):
@@ -138,7 +103,7 @@ def proxy_image(url):
 
 
 def absolute_poster(poster, page_url):
-    """serienstream.to returns relative poster paths, make them absolute."""
+    """Some sites return relative poster paths, make them absolute."""
     poster = normalize_image(poster)
     if poster.startswith("/"):
         parsed = urlparse(page_url)
@@ -149,11 +114,10 @@ def absolute_poster(poster, page_url):
 # ---------------------------------------------------------------------------
 # Languages
 # ---------------------------------------------------------------------------
-BADGE_ORDER = ("German Dub", "German Sub", "English Dub", "English Sub")
+BADGE_ORDER = ("English Dub", "English Sub", "Indonesian Sub")
 
-# serienstream and friends only expose dubs, and use plain enum-keyed dicts
+# Sites that expose languages as plain enum-keyed dicts instead of ProviderData.
 _PLAIN_LABELS = {
-    ("German", "None"): "German Dub",
     ("English", "None"): "English Dub",
 }
 
@@ -185,6 +149,12 @@ def provider_map(provider_data, drop_english_sub=False):
                 for name in providers
                 if name.lower() in _PROVIDER_BY_LOWER
             ]
+            # Direct-download sites serve files without a hoster
+            # extractor, so WORKING_PROVIDERS has no entry for them. Include those
+            # provider names as-is or the language would never become selectable.
+            for name in providers:
+                if name not in usable:
+                    usable.append(name)
             if usable:
                 result[label] = usable
     else:
@@ -309,7 +279,3 @@ def downloaded_folder_names():
             continue
         names.update(entry.name for entry in entries if entry.is_dir())
     return sorted(names)
-
-
-def mangafire_format():
-    return os.environ.get("ANIWORLD_MANGAFIRE_FORMAT", "jpg")

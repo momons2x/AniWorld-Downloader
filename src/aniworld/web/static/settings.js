@@ -5,17 +5,9 @@
 
   const SITE_OPTIONS = [
     ["aniworld", "AniWorld"],
-    ["sto", "SerienStream"],
-    ["burningseries", "BurningSeries"],
-    ["megakino", "MegaKino"],
-    ["moflix", "Moflix"],
-    ["kinox", "Kinox"],
-    ["filmpalast", "FilmPalast"],
-    ["filmo", "Filmo"],
-    ["htv", "Hanime"],
-    ["hentaitv", "HentaiTV"],
-    ["hentaihaven", "HentaiHaven"],
-    ["mangafire", "MangaFire"]
+    ["nineanime", "9anime"],
+    ["miruro", "Miruro"],
+    ["reanime", "Re:Anime"]
   ];
 
   const SECRET_PLACEHOLDER = "••••••••";
@@ -97,7 +89,6 @@
     }
 
     el("downloadPath").value = settings.download_path || "";
-    el("uiLanguage").value = settings.ui_language;
     el("outputFormat").value = settings.output_format;
 
     document.querySelectorAll("[data-setting]").forEach((box) => {
@@ -170,11 +161,7 @@
     el(id).addEventListener("change", refreshPathPreview);
   });
 
-  el("uiLanguage").addEventListener("change", async () => {
-    if (await save({ ui_language: el("uiLanguage").value })) {
-      setTimeout(() => window.location.reload(), 400);
-    }
-  });
+
 
   el("outputFormat").addEventListener("change", () => {
     save({ output_format: el("outputFormat").value });
@@ -658,7 +645,6 @@
     el("discordToken").value = discord.token_set ? SECRET_PLACEHOLDER : "";
     el("discordOwner").value = discord.owner_id || "";
     el("discordMode").value = discord.mode || "standard";
-    el("discordLanguage").value = discord.language || "en";
     el("discordRole").value = discord.request_role_id || "";
     el("discordGuild").value = discord.guild_id || "";
     el("discordAnnounce").value = discord.announce_channel_id || "";
@@ -671,7 +657,6 @@
         token: el("discordToken").value,
         owner_id: el("discordOwner").value.trim(),
         mode: el("discordMode").value,
-        language: el("discordLanguage").value,
         request_role_id: el("discordRole").value.trim(),
         guild_id: el("discordGuild").value.trim(),
         announce_channel_id: el("discordAnnounce").value.trim()
@@ -1097,7 +1082,7 @@ out vec4 fragColor;
     value.textContent = t("settings.ip_loading", "Looking up...");
     meta.textContent = "";
     try {
-      const data = await apiFetch("/api/settings/public-ip");
+      const data = await apiFetch("/api/settings/public-ip", { timeoutMs: 60000 });
       value.textContent = data.ip;
       meta.textContent = t("settings.ip_source", "Source: {source}", {
         source: data.source
@@ -1111,10 +1096,59 @@ out vec4 fragColor;
     }
   });
 
+  /* ===== Stream cache ===== */
+  async function loadStreamCache() {
+    const value = el("streamCacheValue");
+    const meta = el("streamCacheMeta");
+    try {
+      const data = await apiFetch("/api/settings/stream-cache");
+      value.textContent = formatSize(data.bytes);
+      meta.textContent = data.files
+        ? t("settings.stream_cache_meta", "{files} files in {path}", {
+            files: data.files,
+            path: data.path
+          })
+        : t("settings.stream_cache_empty", "Nothing cached right now.");
+      el("clearStreamCacheBtn").disabled = !data.files;
+    } catch (error) {
+      value.textContent = "—";
+      meta.textContent = "";
+      el("clearStreamCacheBtn").disabled = true;
+    }
+  }
+
+  el("clearStreamCacheBtn").addEventListener("click", async () => {
+    const message = t(
+      "settings.confirm_clear_cache",
+      "Clear the playback cache? Videos that are still being prepared will stop."
+    );
+    if (!window.confirm(message)) return;
+
+    const button = el("clearStreamCacheBtn");
+    button.disabled = true;
+    try {
+      const data = await apiSend("/api/settings/stream-cache/clear", "POST", {});
+      let cleared = t("settings.stream_cache_cleared", "Cleared {size}", {
+        size: formatSize(data.removed_bytes)
+      });
+      if (data.kept) {
+        cleared += " " + t("settings.stream_cache_kept", "({count} still in use)", {
+          count: data.kept
+        });
+      }
+      showToast(cleared);
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      loadStreamCache();
+    }
+  });
+
   load();
   loadCustomCss();
   loadShader();
   loadCustomPaths();
   loadDiscordStatus();
   loadApiKeys();
+  loadStreamCache();
 })();

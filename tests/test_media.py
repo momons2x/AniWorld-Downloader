@@ -154,7 +154,7 @@ def test_language_folders_are_scanned_when_separation_is_on(
     monkeypatch, episode_file, downloads
 ):
     monkeypatch.setenv("ANIWORLD_LANG_SEPARATION", "1")
-    episode_file("Naruto", 1, 1, base=downloads / "german-dub")
+    episode_file("Naruto", 1, 1, base=downloads / "english-sub")
     assert media.downloaded_episodes(FakeSeries("Naruto")) == {(1, 1)}
 
 

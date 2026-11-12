@@ -47,8 +47,8 @@ aniworld --no-menu --action Syncplay --keep-watching \
 
 Language Options for Syncplay
 
-For German Dub:
-aniworld --no-menu --action Syncplay --keep-watching --language "German Dub" --aniskip \
+For Indonesian Sub:
+aniworld --no-menu --action Syncplay --keep-watching --language "Indonesian Sub" --aniskip \
   --syncplay-host syncplay.pl:8998 --syncplay-room "MyRoom" --syncplay-username "phoenixthrush" \
   https://aniworld.to/anime/stream/demon-slayer-kimetsu-no-yaiba/staffel-1/episode-1
 
@@ -71,7 +71,7 @@ aniworld --no-menu --provider VOE --language "English Sub" \
 
 Example 6: Use an Episode File (default action)
 To download URLs listed in a file:
-aniworld --no-menu --episode-file episodes.txt --language "German Dub"
+aniworld --no-menu --episode-file episodes.txt --language "English Dub"
 
 Example 7: Use a custom provider URL
 Replace the example URL with a real provider page URL.

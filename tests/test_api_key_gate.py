@@ -149,7 +149,6 @@ def test_a_write_key_can_queue_a_download(client, api_key):
         ("get", "/api/settings"),
         ("put", "/api/settings"),
         ("post", "/api/custom-paths"),
-        ("get", "/api/autosync/status"),
     ],
 )
 def test_a_write_key_cannot_touch_admin_endpoints(client, api_key, method, path):

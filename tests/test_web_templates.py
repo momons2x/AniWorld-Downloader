@@ -22,14 +22,16 @@ def _site_config(client):
 @pytest.mark.parametrize(
     ("site", "languages"),
     [
-        ("aniworld", ["German Dub", "English Sub", "German Sub", "English Dub", "Indonesian Sub"]),
+        ("aniworld", ["English Sub", "English Dub", "Indonesian Sub"]),
         ("nineanime", ["English Sub", "English Dub"]),
+        ("miruro", ["English Sub", "English Dub"]),
+        ("reanime", ["English Sub", "English Dub"]),
     ],
 )
 def test_home_renders_site_languages(client, site, languages):
     settings = _site_config(client)
     assert settings["SITE_LANGUAGES"][site] == languages
-    assert settings["DEFAULT_LANGUAGE"] == "German Dub"
+    assert settings["DEFAULT_LANGUAGE"] == "English Sub"
     assert settings["AUTOSYNC_ENABLED"] is False
     assert "VOE" in settings["STATIC_PROVIDERS"]
 

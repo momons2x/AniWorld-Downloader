@@ -11,13 +11,12 @@ import pytest
 
 from aniworld import entry, menu
 from aniworld.providers import resolve_provider
-from aniworld.web import autosync, db, discord_bot, worker
+from aniworld.web import db, discord_bot, worker
 from aniworld.web.views import api_media
 
-TRUTHY = "https://moflix-stream.xyz/titles/42/season/2/episodes/3"
-SERIES = "https://aniworld.to/anime/stream/example"
-SEASON = SERIES + "/staffel-1"
-EPISODE = SEASON + "/episode-1"
+SERIES = "https://9anime.org.lv/anime/example"
+SEASON = SERIES
+EPISODE = SERIES + "-episode-1"
 
 
 @pytest.fixture
@@ -61,16 +60,16 @@ test_model_dispatch_preserves_episode_selectors = pytest.mark.parametrize(
     "url,expected",
     [
         (
-            " http://www.moflix-stream.xyz/titles/42/silo/season/2/episodes/3/ ",
-            "https://moflix-stream.xyz/titles/42/season/2/episodes/3",
+            " https://9anime.org.lv/anime/example/ ",
+            "https://9anime.org.lv/anime/example",
         ),
         (
-            " http://www.moflix-stream.xyz/titles/42/silo/?season=2&episode=3 ",
-            "https://moflix-stream.xyz/titles/42?season=2&episode=3",
+            " https://9anime.org.lv/anime/example-episode-1/ ",
+            "https://9anime.org.lv/anime/example-episode-1",
         ),
         (
-            " https://aniworld.to/anime/stream/example/staffel-1/episode-1/ ",
-            "https://aniworld.to/anime/stream/example/staffel-1/episode-1",
+            " https://miruro.tv/info/example/some-title/ ",
+            "https://miruro.tv/info/example/some-title",
         ),
     ],
 )(test_model_dispatch_preserves_episode_selectors)
@@ -80,7 +79,7 @@ test_model_dispatch_preserves_episode_selectors = pytest.mark.parametrize(
     "url",
     [
         "https://example.test/serie/stream/example",
-        "https://moflix-stream.xyz/titles/42/silo/unknown/extra",
+        "https://miruro.tv/watch/example",
     ],
 )
 def test_model_dispatch_still_rejects_unsupported_urls(url):
@@ -91,7 +90,9 @@ def test_model_dispatch_still_rejects_unsupported_urls(url):
 @pytest.mark.parametrize("mode", ["interactive", "no-menu", "episode-file"])
 @pytest.mark.parametrize(
     "kind,suffix",
-    [("series", ""), ("season", "/staffel-1"), ("episode", "/staffel-1/episode-1")],
+    # Every surviving site uses one pattern for both its series and its season
+    # page, so model_for_url answers a series URL with the season model.
+    [("season", ""), ("episode", "-episode-1")],
 )
 def test_cli_dispatch_uses_normalized_urls(
     monkeypatch, tmp_path, site_provider, mode, kind, suffix
@@ -132,8 +133,8 @@ def test_cli_dispatch_uses_normalized_urls(
     [
         ("series", "series", ""),
         ("seasons", "series", ""),
-        ("episodes", "season", "/staffel-1"),
-        ("providers", "episode", "/staffel-1/episode-1"),
+        ("episodes", "season", ""),
+        ("providers", "episode", "-episode-1"),
     ],
 )
 def test_web_dispatch_uses_normalized_urls(
@@ -197,31 +198,6 @@ def test_discord_dispatch_normalizes_series_urls(monkeypatch, site_provider):
     item = db.get_queue()[0]
     assert item["series_url"] == SERIES
     assert json.loads(item["episodes"]) == [EPISODE]
-
-
-def test_autosync_dispatch_normalizes_series_urls(monkeypatch, site_provider, downloads):
-    lookup = Mock(return_value=site_provider.provider)
-    monkeypatch.setattr(autosync, "resolve_provider", lookup)
-    monkeypatch.setattr(autosync, "detect_languages", lambda *args: {"German Dub"})
-    monkeypatch.setattr(autosync, "episodes_in_folder", lambda folder: set())
-    monkeypatch.setattr(autosync, "_missing_episodes", lambda *args: [EPISODE])
-    candidate = {
-        "title": "Example",
-        "series_url": f" {SERIES}/ ",
-        "folder": downloads,
-        "lang_folder": None,
-        "custom_path_id": None,
-        "root_name": "Default",
-        "new_languages": {"German Dub"},
-        "new_episodes_with_langs": {},
-    }
-
-    result = autosync._handle(candidate, "VOE")
-
-    assert result["status"] == "queued"
-    lookup.assert_called_once_with(SERIES)
-    site_provider.series.assert_called_once_with(url=SERIES)
-    assert db.get_queue_item(result["queue_id"])["series_url"] == SERIES
 
 
 def test_manual_provider_dispatch_normalizes_urls(monkeypatch, site_provider):

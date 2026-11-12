@@ -14,7 +14,6 @@ from aniworld.web.settings_store import SettingsError, update_settings
 # ---------------------------------------------------------------------------
 def test_defaults_of_a_fresh_install():
     settings = settings_store.read_settings()
-    assert settings["ui_language"] == "en"
     assert settings["lang_separation"] is False
     assert settings["disable_english_sub"] is False
     assert settings["show_all_languages"] is False
@@ -26,7 +25,6 @@ def test_defaults_of_a_fresh_install():
 
 def test_read_settings_lists_the_choices():
     settings = settings_store.read_settings()
-    assert settings["available_ui_languages"] == ["en", "de"]
     assert settings["available_output_formats"] == ["mkv", "mp4"]
     assert settings["available_providers"] == list(WORKING_PROVIDERS)
 
@@ -130,8 +128,8 @@ def test_an_unrelated_setting_still_saves_with_every_site_off(monkeypatch):
     for site in SITE_KEYS:
         monkeypatch.setenv(f"ANIWORLD_ENABLE_{site.upper()}", "0")
 
-    update_settings({"ui_language": "de"})
-    assert settings_store.ui_language() == "de"
+    update_settings({"output_format": "mp4"})
+    assert settings_store.output_format() == "mp4"
 
 
 def test_the_old_helpers_still_answer():
@@ -219,11 +217,6 @@ def test_the_schedule_is_described_for_the_page(monkeypatch):
     )
 
 
-def test_the_description_follows_the_ui_language(monkeypatch):
-    monkeypatch.setenv("ANIWORLD_UI_LANGUAGE", "de")
-    assert settings_store.autosync_schedule_description() == "Jeden Tag"
-
-
 @pytest.mark.parametrize(
     "key,value",
     [
@@ -258,26 +251,6 @@ def test_untouched_settings_are_left_alone():
     update_settings({"enable_nineanime": True, "lang_separation": True})
     update_settings({"enable_nineanime": False})
     assert settings_store.read_settings()["lang_separation"] is True
-
-
-# ---------------------------------------------------------------------------
-# UI language
-# ---------------------------------------------------------------------------
-@pytest.mark.parametrize("language", ["en", "de", "DE", " de "])
-def test_supported_ui_languages_are_accepted(language):
-    update_settings({"ui_language": language})
-    assert settings_store.ui_language() == language.strip().lower()
-
-
-@pytest.mark.parametrize("language", ["fr", "klingon", ""])
-def test_unsupported_ui_languages_are_refused(language):
-    with pytest.raises(SettingsError):
-        update_settings({"ui_language": language})
-
-
-def test_a_junk_language_in_the_environment_falls_back(monkeypatch):
-    monkeypatch.setenv("ANIWORLD_UI_LANGUAGE", "klingon")
-    assert settings_store.ui_language() == "en"
 
 
 # ---------------------------------------------------------------------------
@@ -422,7 +395,6 @@ def test_discord_settings_round_trip():
                 "token": "a-token",
                 "owner_id": "123",
                 "mode": "advanced",
-                "language": "de",
                 "guild_id": "456",
             }
         }
@@ -433,7 +405,6 @@ def test_discord_settings_round_trip():
     assert discord["token_set"] is True
     assert discord["owner_id"] == "123"
     assert discord["mode"] == "advanced"
-    assert discord["language"] == "de"
 
 
 def test_other_settings_do_not_report_a_discord_change():
@@ -474,11 +445,6 @@ def test_an_invalid_discord_mode_is_refused():
         update_settings({"discord": {"mode": "chaotic"}})
 
 
-def test_an_invalid_discord_language_is_refused():
-    with pytest.raises(SettingsError):
-        update_settings({"discord": {"language": "klingon"}})
-
-
 def test_discord_must_be_an_object():
     with pytest.raises(SettingsError):
         update_settings({"discord": "yes please"})
@@ -506,13 +472,13 @@ def test_other_settings_are_not_written_to_the_env_file():
 # Language defaults
 # ---------------------------------------------------------------------------
 def test_the_default_language_can_be_set(monkeypatch):
-    monkeypatch.setenv("ANIWORLD_LANGUAGE", "German Sub")
-    assert settings_store.default_language() == "German Sub"
+    monkeypatch.setenv("ANIWORLD_LANGUAGE", "English Dub")
+    assert settings_store.default_language() == "English Dub"
 
 
 def test_a_junk_default_language_falls_back(monkeypatch):
     monkeypatch.setenv("ANIWORLD_LANGUAGE", "Pig Latin")
-    assert settings_store.default_language() == "German Dub"
+    assert settings_store.default_language() == "English Sub"
 
 
 def test_an_empty_payload_changes_nothing():
@@ -550,10 +516,10 @@ def test_the_preview_is_built_by_the_downloader_itself(monkeypatch, tmp_path):
     """
     from types import SimpleNamespace
 
-    from aniworld.models.aniworld_to.episode import AniworldEpisode
+    from aniworld.models.miruro.episode import MiruroEpisode
 
     monkeypatch.setenv("ANIWORLD_DOWNLOAD_PATH", str(tmp_path))
-    real = AniworldEpisode(
+    real = MiruroEpisode(
         url=settings_store._PREVIEW_URL,
         series=SimpleNamespace(
             title_cleaned=PREVIEW_TITLE,
@@ -563,7 +529,7 @@ def test_the_preview_is_built_by_the_downloader_itself(monkeypatch, tmp_path):
         season=SimpleNamespace(season_number=1),
         episode_number=3,
         selected_path=str(tmp_path),
-        selected_language="German Dub",
+        selected_language="English Sub",
     )
     assert settings_store.preview_paths()["episode"] == str(real._episode_path)
 
@@ -597,7 +563,7 @@ def test_the_preview_follows_the_language_folders(monkeypatch, tmp_path):
     monkeypatch.setenv("ANIWORLD_DOWNLOAD_PATH", str(tmp_path))
     update_settings({"lang_separation": True})
     for path in settings_store.preview_paths().values():
-        assert str(tmp_path / "german-dub") in path
+        assert str(tmp_path / "english-sub") in path
 
 
 def test_a_template_of_two_parts_has_no_season_folder(monkeypatch, tmp_path):

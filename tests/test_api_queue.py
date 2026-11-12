@@ -64,7 +64,7 @@ def test_defaults_are_filled_in(client):
     ]
     item = db.get_queue_item(queue_id)
     assert item["title"] == "Unknown"
-    assert item["language"] == "German Dub"
+    assert item["language"] == "English Sub"
     assert item["provider"] == "VOE"
     assert item["source"] == "manual"
 

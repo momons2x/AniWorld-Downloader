@@ -288,7 +288,7 @@ def test_the_path_is_resolved_when_the_download_starts_not_when_queued(
     monkeypatch.setenv("ANIWORLD_LANG_SEPARATION", "1")
     db.set_queue_status(queue_id, "running")
     calls = run_worker(queue_id)
-    assert calls[0]["selected_path"] == str(downloads / "german-dub")
+    assert calls[0]["selected_path"] == str(downloads / "english-sub")
 
 
 def test_a_custom_path_deleted_while_queued_falls_back(

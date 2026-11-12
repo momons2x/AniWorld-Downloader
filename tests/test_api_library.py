@@ -476,12 +476,6 @@ def test_the_library_page_renders(client):
     assert client.get("/library").status_code == 200
 
 
-def test_the_autosync_page_is_hidden_until_enabled(client, monkeypatch):
-    assert client.get("/autosync").status_code == 404
-    monkeypatch.setenv("ANIWORLD_ENABLE_AUTOSYNC", "1")
-    assert client.get("/autosync").status_code == 200
-
-
 def test_adult_sites_are_never_rendered(client):
     body = client.get("/").data
     assert b'data-site="htv"' not in body

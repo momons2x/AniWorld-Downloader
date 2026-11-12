@@ -445,7 +445,9 @@ def _is_provider_url(candidate, source):
     parsed = urlparse(candidate)
     host = (parsed.hostname or "").removeprefix("www.")
     source_host = (urlparse(source).hostname or "").removeprefix("www.")
-    sto_hosts = {"serienstream.to", "s.to"}
+    # Every host s.to redirects through, so a hop between them is still the
+    # same site rather than a provider taking over.
+    sto_hosts = {"serienstream.to", "serienstream.cx", "186.2.175.5", "s.to"}
     if source_host in sto_hosts and host in sto_hosts:
         return False
     return (

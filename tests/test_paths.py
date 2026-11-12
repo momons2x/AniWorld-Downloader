@@ -43,10 +43,9 @@ def test_a_blank_path_falls_back_too(monkeypatch):
 @pytest.mark.parametrize(
     "language,folder",
     [
-        ("German Dub", "german-dub"),
-        ("German Sub", "german-sub"),
         ("English Dub", "english-dub"),
         ("English Sub", "english-sub"),
+        ("Indonesian Sub", "indonesian-sub"),
     ],
 )
 def test_known_languages_map_to_their_folder(language, folder):
@@ -92,7 +91,7 @@ def test_a_deleted_custom_path_falls_back_to_the_default(tmp_path, downloads):
     what an item with no custom path at all would get."""
     path_id = db.add_custom_path("Movies", str(tmp_path / "movies"))
     db.remove_custom_path(path_id)
-    assert paths.target_path("German Dub", path_id) == str(downloads)
+    assert paths.target_path("English Sub", path_id) == str(downloads)
     assert paths.base_for(path_id) == downloads
 
 
@@ -100,7 +99,7 @@ def test_a_deleted_custom_path_falls_back_with_separation_on(monkeypatch, downlo
     monkeypatch.setenv("ANIWORLD_LANG_SEPARATION", "1")
     path_id = db.add_custom_path("Movies", "/tmp/gone")
     db.remove_custom_path(path_id)
-    assert paths.target_path("German Dub", path_id) == str(downloads / "german-dub")
+    assert paths.target_path("English Sub", path_id) == str(downloads / "english-sub")
 
 
 def test_base_for_prefers_the_custom_path(tmp_path, downloads):
@@ -151,7 +150,7 @@ def test_with_separation_scanning_uses_the_language_folders(monkeypatch, downloa
     monkeypatch.setenv("ANIWORLD_LANG_SEPARATION", "1")
     bases = paths.scan_bases()
     assert len(bases) == len(paths.ALL_LANG_FOLDERS)
-    assert downloads / "german-dub" in bases
+    assert downloads / "english-sub" in bases
 
 
 def test_separation_multiplies_every_root(monkeypatch, tmp_path):

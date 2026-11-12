@@ -8,7 +8,7 @@ Naruto / Naruto Shippuden, Overlord / Overlord II, Dragon Ball / Dragon Ball Z.
 
 import pytest
 
-from aniworld.web import autosync, media
+from aniworld.web import media
 from aniworld.web.media import folder_matches_title
 
 
@@ -269,55 +269,6 @@ def test_the_card_badge_and_the_episode_ticks_agree(episode_file):
     episode_file("Naruto Shippuden", 1, 1)
     assert media.downloaded_folder_names() == ["Naruto Shippuden"]
     assert media.downloaded_episodes(Series("Naruto")) == set()
-
-
-# ---------------------------------------------------------------------------
-# What AutoSync picks up
-# ---------------------------------------------------------------------------
-@pytest.fixture
-def feed(monkeypatch):
-    def use(title, slug):
-        monkeypatch.setattr(
-            autosync,
-            "fetch_new_episodes",
-            lambda: [
-                {
-                    "title": title,
-                    "url": f"https://aniworld.to/anime/stream/{slug}/staffel-1/episode-9",
-                    "languages": ["german"],
-                }
-            ],
-        )
-
-    return use
-
-
-def test_a_sequel_folder_does_not_make_the_original_a_candidate(feed, downloads):
-    """Otherwise AutoSync queues a series you do not own, unattended."""
-    (downloads / "Naruto Shippuden").mkdir()
-    feed("Naruto", "naruto")
-    assert autosync.find_candidates() == []
-
-
-def test_the_series_you_do_own_is_still_a_candidate(feed, downloads):
-    (downloads / "Naruto Shippuden").mkdir()
-    feed("Naruto Shippuden", "naruto-shippuuden")
-    candidates = autosync.find_candidates()
-    assert len(candidates) == 1
-    assert candidates[0]["folder"].name == "Naruto Shippuden"
-
-
-def test_the_decorated_folder_is_still_matched(feed, downloads):
-    (downloads / "Naruto (2002) [imdbid-tt0409591]").mkdir()
-    feed("Naruto", "naruto")
-    assert len(autosync.find_candidates()) == 1
-
-
-def test_the_right_folder_is_picked_when_both_exist(feed, downloads):
-    (downloads / "Naruto (2002)").mkdir()
-    (downloads / "Naruto Shippuden (2007)").mkdir()
-    feed("Naruto", "naruto")
-    assert autosync.find_candidates()[0]["folder"].name == "Naruto (2002)"
 
 
 # ---------------------------------------------------------------------------

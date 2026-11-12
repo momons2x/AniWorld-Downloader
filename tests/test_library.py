@@ -34,9 +34,9 @@ def test_with_separation_only_existing_language_folders_are_listed(
     monkeypatch, downloads
 ):
     monkeypatch.setenv("ANIWORLD_LANG_SEPARATION", "1")
-    (downloads / "german-dub").mkdir()
+    (downloads / "english-sub").mkdir()
     locations = library.list_locations()["locations"]
-    assert [loc["lang_folder"] for loc in locations] == ["german-dub"]
+    assert [loc["lang_folder"] for loc in locations] == ["english-sub"]
 
 
 def test_with_separation_and_nothing_on_disk_there_is_nothing_to_browse(
@@ -76,14 +76,14 @@ def test_loose_files_are_skipped(downloads):
 
 
 def test_language_folders_are_not_listed_as_titles(downloads):
-    (downloads / "german-dub").mkdir()
+    (downloads / "english-sub").mkdir()
     (downloads / "Naruto").mkdir()
     assert library.list_titles() == ["Naruto"]
 
 
 def test_titles_inside_a_language_folder_are_listed(downloads):
-    (downloads / "german-dub" / "Naruto").mkdir(parents=True)
-    assert library.list_titles(lang_folder="german-dub") == ["Naruto"]
+    (downloads / "english-sub" / "Naruto").mkdir(parents=True)
+    assert library.list_titles(lang_folder="english-sub") == ["Naruto"]
 
 
 def test_titles_of_a_custom_path(tmp_path):

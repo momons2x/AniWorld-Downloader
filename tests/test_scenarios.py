@@ -211,17 +211,9 @@ def test_turning_the_library_off_closes_its_pages_and_endpoints(client):
     assert client.get("/api/library/locations").status_code == 404
 
 
-def test_turning_autosync_off_closes_its_page(client):
-    client.put("/api/settings", json={"enable_autosync": True})
-    assert client.get("/autosync").status_code == 200
-    client.put("/api/settings", json={"enable_autosync": False})
-    assert client.get("/autosync").status_code == 404
-
-
 def test_the_ui_language_reaches_the_rendered_page(client):
     client.put("/api/settings", json={"ui_language": "de"})
     assert b'"de"' in client.get("/").data or b"de" in client.get("/").data
-
 
 # ---------------------------------------------------------------------------
 # Deleting things that are in use
@@ -467,10 +459,10 @@ def test_an_admin_key_can_change_a_setting_that_the_next_download_uses(
         "/api/settings", json={"lang_separation": True}, headers={"X-API-Key": raw}
     )
     queue_id = client.post(
-        "/api/download", json={"episodes": ["ep1"], "language": "German Dub"}
+        "/api/download", json={"episodes": ["ep1"], "language": "English Sub"}
     ).get_json()["queue_id"]
     fake_download(queue_id, files=["Naruto/Naruto S01E001.mkv"])
-    assert (downloads / "german-dub" / "Naruto").exists()
+    assert (downloads / "english-sub" / "Naruto").exists()
 
 
 # ---------------------------------------------------------------------------

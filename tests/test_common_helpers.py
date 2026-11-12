@@ -6,7 +6,6 @@ from types import SimpleNamespace
 
 import pytest
 
-from aniworld.models.aniworld_to.episode import AniworldEpisode
 from aniworld.models.common.common import (
     DownloadCancelled,
     _finalize_resolution_naming,
@@ -21,6 +20,7 @@ from aniworld.models.common.common import (
     get_ffmpeg_progress,
     movie_folder_enabled,
 )
+from aniworld.models.miruro.episode import MiruroEpisode
 
 
 # ---------------------------------------------------------------------------
@@ -83,13 +83,13 @@ def test_container_resolution_is_unknown_with_multiple_video_streams(monkeypatch
     assert _read_container_resolution("episode.mkv") == "unknown"
 
 
-def test_resolution_placeholder_is_used_in_aniworld_filename(monkeypatch, tmp_path):
+def test_resolution_placeholder_is_used_in_the_episode_filename(monkeypatch, tmp_path):
     monkeypatch.setenv(
         "ANIWORLD_NAMING_TEMPLATE",
         "{title}.S{season}E{episode}.{resolution}.{language}.mp4",
     )
-    episode = AniworldEpisode(
-        "https://aniworld.to/anime/stream/seriesname/staffel-1/episode-1",
+    episode = MiruroEpisode(
+        "https://miruro.tv/watch/seriesname/episode/1",
         series=SimpleNamespace(title_cleaned="Seriesname", release_year="", imdb=""),
         season=SimpleNamespace(season_number=1),
         episode_number=1,
@@ -107,8 +107,8 @@ def test_pending_resolution_is_hidden_from_progress(monkeypatch, tmp_path):
         "ANIWORLD_NAMING_TEMPLATE",
         "{title}.S{season}E{episode}.{resolution} - {language}.mkv",
     )
-    episode = AniworldEpisode(
-        "https://aniworld.to/anime/stream/seriesname/staffel-1/episode-2",
+    episode = MiruroEpisode(
+        "https://miruro.tv/watch/seriesname/episode/2",
         series=SimpleNamespace(title_cleaned="Seriesname", release_year="", imdb=""),
         season=SimpleNamespace(season_number=1),
         episode_number=2,
@@ -125,8 +125,8 @@ def test_finished_download_is_renamed_with_its_resolution(monkeypatch, tmp_path)
     monkeypatch.setenv(
         "ANIWORLD_NAMING_TEMPLATE", "{title}.{resolution}.{language}.mkv"
     )
-    episode = AniworldEpisode(
-        "https://aniworld.to/anime/stream/seriesname/staffel-1/episode-1",
+    episode = MiruroEpisode(
+        "https://miruro.tv/watch/seriesname/episode/1",
         series=SimpleNamespace(title_cleaned="Seriesname", release_year="", imdb=""),
         season=SimpleNamespace(season_number=1),
         episode_number=1,

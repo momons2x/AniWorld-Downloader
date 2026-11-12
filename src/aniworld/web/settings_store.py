@@ -167,8 +167,14 @@ def show_all_languages():
 
 
 def default_language():
-    language = os.environ.get("ANIWORLD_LANGUAGE", "German Dub")
-    return language if language in LANG_LABELS.values() else "German Dub"
+    """The language a download starts in, when the setting does not say one.
+
+    Falls back to the first label the site offers, so the default cannot drift
+    out of LANG_LABELS the way a hardcoded string does.
+    """
+    fallback = next(iter(LANG_LABELS.values()))
+    language = os.environ.get("ANIWORLD_LANGUAGE", "")
+    return language if language in LANG_LABELS.values() else fallback
 
 
 # ---------------------------------------------------------------------------
@@ -205,7 +211,7 @@ def _template_with_extension(extension):
 # Where a download lands
 #
 # Not a second implementation of the naming rules: the episode path is built by
-# the downloader itself, a real AniworldEpisode handed a stand-in series, so the
+# the downloader itself, a real episode object handed a stand-in series, so the
 # box on the settings page cannot say one thing while the disk gets another.
 #
 # The stand-in carries what a real page gives, which is why the title is the
@@ -216,8 +222,8 @@ def _template_with_extension(extension):
 # and takes only the file extension from the template.
 # ---------------------------------------------------------------------------
 _PREVIEW_URL = (
-    "https://aniworld.to/anime/stream/konosuba-gods-blessing-on-this-wonderful-world"
-    "/staffel-1/episode-3"
+    "https://miruro.tv/watch/konosuba-gods-blessing-on-this-wonderful-world"
+    "/episode/3"
 )
 _PREVIEW_TITLE = "KonoSuba God\u2019s blessing on this wonderful world!"
 _PREVIEW_YEARS = "2016-2025"
@@ -230,9 +236,9 @@ def _preview_episode(root, language):
     """A real episode object, built without touching the network."""
     from types import SimpleNamespace
 
-    from ..models.aniworld_to.episode import AniworldEpisode
+    from ..models.miruro.episode import MiruroEpisode
 
-    episode = AniworldEpisode(
+    episode = MiruroEpisode(
         url=_PREVIEW_URL,
         series=SimpleNamespace(
             title_cleaned=_PREVIEW_TITLE,

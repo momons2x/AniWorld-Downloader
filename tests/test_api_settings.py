@@ -10,13 +10,12 @@ from aniworld.web import db, settings_store
 # ---------------------------------------------------------------------------
 def test_settings_are_readable(client):
     body = client.get("/api/settings").get_json()
-    assert body["ui_language"] == "en"
     assert "available_providers" in body
 
 
 def test_a_setting_can_be_changed(client):
-    assert client.put("/api/settings", json={"ui_language": "de"}).status_code == 200
-    assert settings_store.ui_language() == "de"
+    assert client.put("/api/settings", json={"output_format": "mp4"}).status_code == 200
+    assert settings_store.output_format() == "mp4"
 
 
 def test_the_change_shows_up_on_the_next_read(client):
@@ -25,15 +24,15 @@ def test_the_change_shows_up_on_the_next_read(client):
 
 
 def test_an_invalid_setting_is_a_400_with_a_reason(client):
-    response = client.put("/api/settings", json={"ui_language": "klingon"})
+    response = client.put("/api/settings", json={"output_format": "klingon"})
     assert response.status_code == 400
     assert "klingon" in response.get_json()["error"]
 
 
 def test_a_rejected_change_leaves_the_old_value(client):
-    client.put("/api/settings", json={"ui_language": "de"})
-    client.put("/api/settings", json={"ui_language": "klingon"})
-    assert settings_store.ui_language() == "de"
+    client.put("/api/settings", json={"output_format": "mp4"})
+    client.put("/api/settings", json={"output_format": "klingon"})
+    assert settings_store.output_format() == "mp4"
 
 
 def test_the_autosync_schedule_can_be_saved_as_a_sentence(client):
@@ -109,12 +108,11 @@ def test_previewing_is_admin_only_like_the_rest_of_the_settings():
     assert "api.preview_schedule" in ADMIN_ENDPOINTS
 
 
-def test_a_preview_is_described_in_the_ui_language(client, monkeypatch):
-    monkeypatch.setenv("ANIWORLD_UI_LANGUAGE", "de")
+def test_a_preview_is_described_in_english(client):
     body = client.post(
         "/api/settings/schedule-preview", json={"autosync_cron": "0 22 * * 1"}
     ).get_json()
-    assert body["description"] == "Jeden Montag um 22:00"
+    assert body["description"] == "On Monday at 22:00"
 
 
 def test_the_provider_order_can_be_saved(client):
@@ -416,11 +414,10 @@ def test_the_settings_can_be_downloaded_as_an_env_file(client):
 def test_the_export_holds_what_is_running(client):
     client.put(
         "/api/settings",
-        json={"enable_miruro": True, "ui_language": "de", "autosync_interval": "6h"},
+        json={"enable_miruro": True, "output_format": "mp4", "autosync_interval": "6h"},
     )
     body = client.get("/api/settings/env").get_data(as_text=True)
     assert "ANIWORLD_ENABLE_MIRURO=1" in body
-    assert "ANIWORLD_UI_LANGUAGE=de" in body
     assert "ANIWORLD_AUTOSYNC_INTERVAL=6h" in body
 
 
@@ -471,7 +468,6 @@ def test_the_export_reads_back_as_the_same_settings(client, tmp_path):
     assert loaded["ANIWORLD_ENABLE_NINEANIME"] == "1"
     assert loaded["ANIWORLD_ENABLE_MIRURO"] == "0"
     assert loaded["ANIWORLD_NAMING_TEMPLATE"].endswith(".mp4"), "spaces survive"
-    assert loaded["ANIWORLD_UI_LANGUAGE"] == "en"
 
 
 def test_the_export_needs_an_admin():

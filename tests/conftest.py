@@ -91,9 +91,9 @@ def clean_env(monkeypatch, tmp_path):
 
 @pytest.fixture(autouse=True)
 def no_background_threads(monkeypatch):
-    """No test may start the real queue worker or Auto-Sync.
+    """No test may start the real queue worker.
 
-    Both spawn a daemon thread that lives for the rest of the process, and
+    It spawns a daemon thread that lives for the rest of the process, and
     ensure_started() only starts one per process, so a single test that calls
     it for real leaks a thread into every test after it. fresh_db repoints
     DB_PATH per test and the worker re-reads it on every poll, so that thread
@@ -104,26 +104,6 @@ def no_background_threads(monkeypatch):
     from aniworld.web import worker
 
     monkeypatch.setattr(worker, "ensure_started", lambda: None)
-    try:
-        from aniworld.web import autosync
-    except ImportError:
-        return
-    monkeypatch.setattr(autosync, "ensure_started", lambda: None)
-
-
-@pytest.fixture(autouse=True)
-def fresh_autosync_anchor(monkeypatch):
-    """Auto-Sync counts fixed times from when the process first saw them.
-
-    That moment is remembered in a module global, so without this a test that
-    looks at the schedule would fix the anchor for every test after it.
-    """
-    try:
-        from aniworld.web import autosync
-    except ImportError:
-        return
-
-    monkeypatch.setattr(autosync, "_anchored_at", None)
 
 
 @pytest.fixture
@@ -186,7 +166,7 @@ def queue_item():
     def factory(title="Test Anime", episodes=None, **kwargs):
         options = {
             "series_url": f"https://aniworld.to/anime/stream/{title.lower()}",
-            "language": "German Dub",
+            "language": "English Sub",
             "provider": "VOE",
         }
         options.update(kwargs)

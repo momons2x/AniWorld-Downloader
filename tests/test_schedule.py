@@ -171,8 +171,6 @@ def test_the_error_says_which_field_broke():
         ("22:00", "0 22 * * *"),
         ("monday 22:00", "0 22 * * 1"),
         ("sat,sun at midnight", "0 0 * * 0,6"),
-        ("jeden montag um 22 uhr", "0 22 * * 1"),
-        ("täglich um 20:00", "0 20 * * *"),
     ],
 )
 def test_a_phrase_becomes_cron(phrase, expression):
@@ -329,11 +327,6 @@ def test_a_schedule_reads_as_a_sentence(expression, described):
     assert schedule.parse(expression).describe() == described
 
 
-def test_a_schedule_can_be_read_in_german():
-    assert schedule.parse("0 22 * * 1").describe("de") == "Jeden Montag um 22:00"
-    assert schedule.parse("0 */6 * * *").describe("de") == "Alle 6 Stunden"
-
-
 def test_an_unknown_language_falls_back_to_english():
     assert schedule.parse("0 22 * * *").describe("klingon") == "Every day at 22:00"
 
@@ -348,12 +341,6 @@ def test_lines_with_different_days_each_get_their_own_clause():
 def test_three_clauses_read_as_a_list():
     assert schedule.parse("0 8 * * 1; 0 22 * * 5; 0 12 * * 0").describe() == (
         "On Monday at 08:00, on Friday at 22:00 and on Sunday at 12:00"
-    )
-
-
-def test_clauses_are_read_in_german_too():
-    assert schedule.parse("0 3 * * 3; 0 4 * * 2").describe("de") == (
-        "Jeden Mittwoch um 03:00 und jeden Dienstag um 04:00"
     )
 
 

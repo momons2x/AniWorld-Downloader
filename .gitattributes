@@ -1,0 +1,2 @@
+# Keep Windows scripts with CRLF endings regardless of core.autocrlf.
+*.bat text eol=crlf

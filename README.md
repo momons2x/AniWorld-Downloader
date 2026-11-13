@@ -1,24 +1,24 @@
 # AniWorld Downloader v5
 
-![AniWorld Downloader banner](https://github.com/phoenixthrush/AniWorld-Downloader/blob/models/.github/assets/aniworld-banner.png?raw=true)
+![AniWorld Downloader banner](https://github.com/momons2x/AniWorld-Downloader/blob/models/.github/assets/aniworld-banner.png?raw=true)
 
 ![GitHub Release](https://img.shields.io/github/v/release/phoenixthrush/AniWorld-Downloader)
 [![PyPI Downloads](https://static.pepy.tech/badge/aniworld)](https://pepy.tech/projects/aniworld)
 ![GitHub License](https://img.shields.io/github/license/phoenixthrush/AniWorld-Downloader)
-[![Docker Image Size](https://ghcr-badge.egpl.dev/phoenixthrush/aniworld-downloader/size)](https://github.com/phoenixthrush/AniWorld-Downloader/pkgs/container/aniworld-downloader)
-![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/phoenixthrush/AniWorld-Downloader)
+![Docker Image Size](https://ghcr-badge.egpl.dev/phoenixthrush/aniworld-downloader/size)](https://github.com/phoenixthrush/AniWorld-Downloader/pkgs/container/aniworld-downloader)
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/momons2x/AniWorld-Downloader)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/BfDvrKd8V5)
 [![GitHub Sponsors](https://img.shields.io/badge/♥%20Sponsor-Visit-red)](https://github.com/sponsors/phoenixthrush)
-![GitHub Repo stars](https://img.shields.io/github/stars/phoenixthrush/AniWorld-Downloader)
-![GitHub forks](https://img.shields.io/github/forks/phoenixthrush/AniWorld-Downloader)
+![GitHub Repo stars](https://img.shields.io/github/stars/momons2x/AniWorld-Downloader)
+![GitHub forks](https://img.shields.io/github/forks/momons2x/AniWorld-Downloader)
 
-Find, download, and watch anime, movies, and series, or save manga chapters to read later. AniWorld Downloader brings supported sites together in a browser-based Web UI, with an interactive terminal menu and a CLI for scripts and automation.
+Find, download, and watch anime, movies, and series. AniWorld Downloader brings supported sites together in a browser-based Web UI, with an interactive terminal menu and a CLI for scripts and automation.
 
 It runs on **Windows, macOS, and Linux**, with **Docker** and standalone builds available too. Free and open source, with no ads, tracking, or paid-only features.
 
 [Getting started](#quick-start) · [Supported sites](#supported-sites) · [Docker](#docker) · [Documentation](https://www.phoenixthrush.com/AniWorld-Downloader-Docs/) · [Python examples](examples)
 
-![Interactive terminal menu](https://github.com/phoenixthrush/AniWorld-Downloader/blob/models/.github/assets/demo.png?raw=true)
+![Interactive terminal menu](https://github.com/momons2x/AniWorld-Downloader/blob/models/.github/assets/demo.png?raw=true)
 
 https://github.com/user-attachments/assets/d65c4a5c-827a-45d7-a904-78977fd9aef4
 
@@ -40,20 +40,38 @@ aniworld
 To install the latest development version from the `models` branch:
 
 ```bash
-pip install --upgrade git+https://github.com/phoenixthrush/AniWorld-Downloader.git@models
+pip install --upgrade git+https://github.com/momons2x/AniWorld-Downloader.git@models
 ```
 
 Video downloads need **FFmpeg**. Watching uses **mpv**, or **IINA** on macOS. Synchronized playback requires **Syncplay and mpv**. The app can offer portable FFmpeg, mpv, and Syncplay installation on Windows, and player installation through supported package managers on macOS/Linux. Install FFmpeg yourself on macOS/Linux; unattended deployments should provide the required tools in advance.
 
 Prefer another installation method? Use [Docker](#docker) or download a standalone build from [GitHub Releases](https://github.com/phoenixthrush/AniWorld-Downloader/releases). See the [documentation](https://www.phoenixthrush.com/AniWorld-Downloader-Docs/) for platform-specific setup and troubleshooting.
 
+### Run from a checkout (Windows)
+
+If you cloned this repository, two scripts do the setup and the launch:
+
+| Script | What it does |
+| --- | --- |
+| `install.bat` | Creates `.venv` and installs the package with its extras. Run once. |
+| `start.bat` | Starts the Web UI and opens your browser at [localhost:8080](http://localhost:8080). Close the window to stop it. |
+
+Double-click `install.bat`, then double-click `start.bat`. Both keep their window open on failure so you can read the error.
+
+`start.bat` forwards extra arguments, so `start.bat --web-port 8081` or `start.bat --no-browser` work as-is. Without the scripts the equivalent is:
+
+```bash
+python -m venv .venv
+.venv\Scripts\python -m pip install -e ".[all,test]"
+.venv\Scripts\aniworld.exe --web-ui
+```
+
 ## Features
 
-- Download individual episodes, whole seasons or series, movies, and manga chapters.
+- Download individual episodes, whole seasons or series, and movies.
 - Search supported sites, track your download queue, and browse your library in the Web UI.
-- Schedule Auto-Sync checks for AniWorld titles already downloaded to your library.
 - Choose available audio and subtitle languages, with fallback to other stream hosters.
-- Customize supported naming templates and output formats, including MKV/MP4 for video and JPG/CBZ/EPUB for manga; naming support varies by backend.
+- Customize supported naming templates and output formats, including MKV/MP4 for video; naming support varies by backend.
 - Watch through external players, with AniSkip and Anime4K support where applicable.
 
 The Web UI also supports local accounts, optional OIDC SSO, custom CSS, and background shaders. SSO alongside local login requires both `--web-auth` and `--web-sso`; `--web-force-sso` enables SSO-only authentication. A JSON API and optional Discord request bot let you connect it to other tools. Features and language availability vary by site.
@@ -62,44 +80,29 @@ For CAPTCHA browser visibility, manual solving, timeouts, and debug logs, see [C
 
 ## Supported Sites
 
-AniWorld and SerienStream are the main focus of the project.
+These three sites have working download providers, and each one gets its own tab on the home page with browse rows (newest, popular, trending) read straight from that site. A legacy **AniWorld** tab is still rendered, but its titles no longer resolve to a provider.
 
-See the [supported sites documentation](https://www.phoenixthrush.com/AniWorld-Downloader-Docs/supported-sites) for live-check details and IP/VPN differences.
-
-| Site | Content | Status | Notes |
+| Site | Base URL | Content | Languages |
 | --- | --- | --- | --- |
-| AniWorld | Anime and anime movies | Stream URLs resolved | VOE, Doodstream, and Filemoon samples passed; Vidmoly failed |
-| SerienStream | Series | Stream URLs resolved | Both dub presets resolved VOE; CAPTCHA handling can block access |
-| MegaKino | Movies and series | Stream URLs resolved | Sampled title's VOE link passed; a separate MegaKino hoster sample also passed |
-| Filmo | Movies | Stream URLs resolved | VOE samples passed |
-| MangaFire | Manga | Chapter/page URLs resolved | Two sample titles; archive creation and image downloads were not tested |
-| FilmPalast | Movies | Stream URL resolved | VOE sample passed; some requests returned no extractable source |
-| Kinox | Movies and series | Blocked by verification CAPTCHA | Disabled by default |
-| BurningSeries | Series | Stream mirrors returned VPN warning pages | No usable mirror for the sample; stopped at the first blocked hoster |
+| 9anime | `https://9anime.org.lv` | Anime and anime movies | English Sub, English Dub |
+| Miruro | `https://miruro.tv` | Anime and anime movies | English Sub, English Dub |
+| Re:Anime | `https://reanime.to` | Anime and anime movies | English Sub, English Dub |
 
-"Disabled by default" refers to Web UI visibility; direct CLI URLs remain accepted.
+Turn a site off in **Settings → Sites** to remove its tab and rows. See the [supported sites documentation](https://www.phoenixthrush.com/AniWorld-Downloader-Docs/supported-sites) for live-check details and IP/VPN differences.
 
 ### Stream Hosters
 
 Sites list the titles; stream hosters provide the video links.
 
-| Hoster | Stream extraction | Preview extraction |
-| --- | --- | --- |
-| VOE | Fresh source-site samples passed; saved standalone sample returned HTTP 404 | All tested previews failed |
-| Filemoon | Fresh AniWorld samples passed; saved standalone sample was inconsistent | Not implemented |
-| Doodstream | Samples passed | Not implemented |
-| MegaKino | Sample passed | Not implemented |
-| Gupload | Not checked: no saved embed or discovered sample | Not implemented |
-| MoflixClick | Moflix sample passed; no saved standalone embed | Not implemented |
-| Vidara | Moflix sample passed; Kinox remained CAPTCHA-blocked | Not implemented |
-| Vidmoly | Samples failed: no extractable script content | Samples failed |
-| Vidoza | Sample URL returned HTTP 404 | Sample URL returned HTTP 404 |
+`VOE` · `Vidmoly` · `Vidoza` · `Doodstream` · `Filemoon` · `Gupload` · `MegaPlay` · `Vidara` · `MiruroHop` · `MiruroBee` · `MiruroSun` · `MiruroBun` · `ReAnimeHD1` · `ReAnimeHD2`
 
-If a hoster fails, the downloader can try others in your configured fallback order, provided the title offers them in the selected language. It does not automatically switch languages. A failed or missing sample does not establish that a hoster has shut down. See [live provider checks](https://www.phoenixthrush.com/AniWorld-Downloader-Docs/contributing#live-provider-checks) to repeat these checks.
+Miruro and Re:Anime also ship their own hosters (`Miruro*`, `ReAnime*`), which are what those two sites list first.
+
+If a hoster fails, the downloader can try others in your configured fallback order, provided the title offers them in the selected language. It does not automatically switch languages. See [live provider checks](https://www.phoenixthrush.com/AniWorld-Downloader-Docs/contributing#live-provider-checks) to repeat these checks.
 
 ## CLI Usage
 
-Replace `SUPPORTED_URL` with an episode, season, series, movie, or chapter URL from a supported site:
+Replace `SUPPORTED_URL` with an episode, season, series, or movie URL from a supported site:
 
 ```bash
 aniworld "SUPPORTED_URL"
@@ -108,7 +111,7 @@ aniworld "SUPPORTED_URL"
 To choose a language and provider without opening the menu:
 
 ```bash
-aniworld --no-menu --language "German Dub" --provider VOE "https://aniworld.to/anime/stream/example/staffel-1/episode-1"
+aniworld --no-menu --language "English Sub" --provider MiruroHop "https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/1"
 ```
 
 For all options, more examples, or your installed version:
@@ -129,6 +132,8 @@ docker compose up -d
 ```
 
 Open [localhost:8080](http://localhost:8080) when the container is ready. The image includes FFmpeg, Chromium for captcha handling, and the EPUB extra. Chromium setup runs only when an operation needs a browser and reuses an existing installation.
+
+> **Note:** `docker-compose.yaml` still pulls `ghcr.io/phoenixthrush/aniworld-downloader:latest` from the upstream project, so a container does **not** contain the changes in this fork. Point `image:` at your own build if you need them.
 
 The terminal menu in the Docker image offers only Download and uses your configured download folder.
 
@@ -171,16 +176,16 @@ Keys have read, read-and-download, or full-access permissions. They cannot manag
 
 **Appearance:** use **Settings → Appearance** for custom CSS and background shaders. The [`themes/`](themes) directory contains a light theme and a documented CSS template. For community themes and installation instructions, see [aniworld-themes](https://github.com/SiroxCW/aniworld-themes) by SiroxCW. To recover from a theme that hides controls, open `/settings?nocss=1`.
 
-**Python:** all public site models are available from `aniworld` or `aniworld.models`. Search and genre functions share `aniworld.search`; see [Genre Search](https://www.phoenixthrush.com/AniWorld-Downloader-Docs/genre-search) for supported filters and site limits. The [`examples/`](examples) directory demonstrates models, metadata, downloads, and genre queries.
+**Python:** all public site models are available from `aniworld` or `aniworld.models`. Site search lives in `aniworld.web.sitesearch`. The [`examples/`](examples) directory demonstrates models, metadata, and downloads.
 
 ## Contributing
 
-Bug reports, fixes, provider updates, and documentation improvements are welcome. Please check existing [issues](https://github.com/phoenixthrush/AniWorld-Downloader/issues) first. For a bug report, include your operating system, installation method, app and Python versions, the command or steps you used, and relevant logs.
+Bug reports, fixes, provider updates, and documentation improvements are welcome. Please check existing [issues](https://github.com/momons2x/AniWorld-Downloader/issues) first. For a bug report, include your operating system, installation method, app and Python versions, the command or steps you used, and relevant logs.
 
 To work on the current development branch:
 
 ```bash
-git clone --branch models https://github.com/phoenixthrush/AniWorld-Downloader.git
+git clone --branch models https://github.com/momons2x/AniWorld-Downloader.git
 cd AniWorld-Downloader
 python -m pip install -e ".[all,test]"
 pytest
@@ -192,8 +197,8 @@ Automated tests run offline. See the [testing guide](https://www.phoenixthrush.c
 
 Thank you to everyone who reports issues, shares ideas, and contributes code.
 
-<a href="https://github.com/phoenixthrush/AniWorld-Downloader/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=phoenixthrush/AniWorld-Downloader" alt="AniWorld Downloader contributors" />
+<a href="https://github.com/momons2x/AniWorld-Downloader/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=momons2x/AniWorld-Downloader" alt="AniWorld Downloader contributors" />
 </a>
 
 ### Credits
@@ -210,7 +215,7 @@ AniWorld Downloader uses [mpv](https://github.com/mpv-player/mpv), [IINA](https:
 
 ## Support and Community
 
-For help, check the [documentation](https://www.phoenixthrush.com/AniWorld-Downloader-Docs/), open a [GitHub issue](https://github.com/phoenixthrush/AniWorld-Downloader/issues), or join us on [Discord](https://discord.gg/BfDvrKd8V5). You can also reach me at [contact@phoenixthrush.com](mailto:contact@phoenixthrush.com).
+For help, check the [documentation](https://www.phoenixthrush.com/AniWorld-Downloader-Docs/), open a [GitHub issue](https://github.com/momons2x/AniWorld-Downloader/issues), or join us on [Discord](https://discord.gg/BfDvrKd8V5). You can also reach me at [contact@phoenixthrush.com](mailto:contact@phoenixthrush.com).
 
 If the project has been useful, a star, a contribution, or a [donation](https://github.com/sponsors/phoenixthrush) is always appreciated. Thanks for being part of it. <3
 
@@ -224,11 +229,11 @@ Questions about content hosted by another service should be directed to that ser
 
 ## Star History
 
-<a href="https://www.star-history.com/?type=date&repos=phoenixthrush%2FAniWorld-Downloader">
+<a href="https://www.star-history.com/?type=date&repos=momons2x%2FAniWorld-Downloader">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=phoenixthrush/AniWorld-Downloader&type=date&theme=dark&legend=top-left&sealed_token=2w3mvLwCvYdC3Bq9vEfw-I3us7ocvtgOppVR5_etK2ZoymoZesVxuElMPDB0v_x46GEhBSkjWsN6bgleOwD5k0xC-LI-o4eh1Cq4iJAIRP-GBwweIiP7UqcOt7Vn9BjC_-Wv0iuJbxmfs8Xn2QAiwgq0TuOu5LLJkkbTleDugs-IwWF7ZYz5hvUPkc6-" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=phoenixthrush/AniWorld-Downloader&type=date&legend=top-left&sealed_token=2w3mvLwCvYdC3Bq9vEfw-I3us7ocvtgOppVR5_etK2ZoymoZesVxuElMPDB0v_x46GEhBSkjWsN6bgleOwD5k0xC-LI-o4eh1Cq4iJAIRP-GBwweIiP7UqcOt7Vn9BjC_-Wv0iuJbxmfs8Xn2QAiwgq0TuOu5LLJkkbTleDugs-IwWF7ZYz5hvUPkc6-" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=phoenixthrush/AniWorld-Downloader&type=date&legend=top-left&sealed_token=2w3mvLwCvYdC3Bq9vEfw-I3us7ocvtgOppVR5_etK2ZoymoZesVxuElMPDB0v_x46GEhBSkjWsN6bgleOwD5k0xC-LI-o4eh1Cq4iJAIRP-GBwweIiP7UqcOt7Vn9BjC_-Wv0iuJbxmfs8Xn2QAiwgq0TuOu5LLJkkbTleDugs-IwWF7ZYz5hvUPkc6-" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=momons2x/AniWorld-Downloader&type=date&theme=dark&legend=top-left&sealed_token=2w3mvLwCvYdC3Bq9vEfw-I3us7ocvtgOppVR5_etK2ZoymoZesVxuElMPDB0v_x46GEhBSkjWsN6bgleOwD5k0xC-LI-o4eh1Cq4iJAIRP-GBwweIiP7UqcOt7Vn9BjC_-Wv0iuJbxmfs8Xn2QAiwgq0TuOu5LLJkkbTleDugs-IwWF7ZYz5hvUPkc6-" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=momons2x/AniWorld-Downloader&type=date&legend=top-left&sealed_token=2w3mvLwCvYdC3Bq9vEfw-I3us7ocvtgOppVR5_etK2ZoymoZesVxuElMPDB0v_x46GEhBSkjWsN6bgleOwD5k0xC-LI-o4eh1Cq4iJAIRP-GBwweIiP7UqcOt7Vn9BjC_-Wv0iuJbxmfs8Xn2QAiwgq0TuOu5LLJkkbTleDugs-IwWF7ZYz5hvUPkc6-" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=momons2x/AniWorld-Downloader&type=date&legend=top-left&sealed_token=2w3mvLwCvYdC3Bq9vEfw-I3us7ocvtgOppVR5_etK2ZoymoZesVxuElMPDB0v_x46GEhBSkjWsN6bgleOwD5k0xC-LI-o4eh1Cq4iJAIRP-GBwweIiP7UqcOt7Vn9BjC_-Wv0iuJbxmfs8Xn2QAiwgq0TuOu5LLJkkbTleDugs-IwWF7ZYz5hvUPkc6-" />
  </picture>
 </a>
 

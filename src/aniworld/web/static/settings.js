@@ -4,7 +4,6 @@
   const el = (id) => document.getElementById(id);
 
   const SITE_OPTIONS = [
-    ["aniworld", "AniWorld"],
     ["nineanime", "9anime"],
     ["miruro", "Miruro"],
     ["reanime", "Re:Anime"]

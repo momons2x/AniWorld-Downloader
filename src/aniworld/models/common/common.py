@@ -1580,7 +1580,7 @@ if __name__ == "__main__":
     from aniworld.models import AniworldEpisode
 
     ep = AniworldEpisode(
-        "https://aniworld.to/anime/stream/highschool-dxd/staffel-1/episode-1"
+        "https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/1"
     )
 
     ep.syncplay()

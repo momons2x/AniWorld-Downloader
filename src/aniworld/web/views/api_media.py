@@ -1,5 +1,6 @@
 """Search, browse and the series/season/episode endpoints."""
 
+import random
 import re
 import time
 
@@ -11,18 +12,12 @@ from niquests.exceptions import HTTPError, RequestException
 from ...config import DEFAULT_USER_AGENT, GLOBAL_SESSION
 from ...logger import get_logger
 from ...models.miruro._api import fetch_latest_animes as fetch_miruro_latest
+from ...models.nineanime._api import fetch_genre_animes
 from ...models.nineanime._api import fetch_latest_animes as fetch_nineanime_latest
 from ...models.nineanime._api import fetch_popular_animes as fetch_nineanime_popular
 from ...models.reanime._api import fetch_latest_animes as fetch_reanime_latest
 from ...models.reanime._api import fetch_trending_animes as fetch_reanime_trending
 from ...providers import normalize_url, resolve_provider
-from ...search import (
-    GENRE_PAGE_SIZE,
-    fetch_genre_animes,
-    fetch_new_animes,
-    fetch_popular_animes,
-    random_anime,
-)
 from .. import media, sitesearch
 from ..settings_store import english_sub_disabled
 
@@ -31,6 +26,14 @@ logger = get_logger(__name__)
 # Browse rows change slowly, so cache them for an hour per process.
 BROWSE_TTL = 3600
 _browse_cache = {}
+
+# Sites a random pick can come from. Each one already has a "what's new" list
+# to draw from, so a random title costs one browse fetch like any other row.
+_RANDOM_FETCHERS = {
+    "nineanime": fetch_nineanime_latest,
+    "miruro": fetch_miruro_latest,
+    "reanime": fetch_reanime_latest,
+}
 
 
 def register(bp):
@@ -58,7 +61,7 @@ def register(bp):
 def search():
     data = request.get_json(silent=True) or {}
     keyword = (data.get("keyword") or "").strip()
-    site = (data.get("site") or "aniworld").strip()
+    site = (data.get("site") or "nineanime").strip()
     if not keyword:
         return jsonify({"error": "keyword is required"}), 400
 
@@ -255,10 +258,19 @@ def providers():
 # Misc
 # ---------------------------------------------------------------------------
 def random_title():
-    url = random_anime()
-    if url:
-        return jsonify({"url": url})
-    return jsonify({"error": "Failed to fetch random anime"}), 500
+    """One title at random from whichever site the page has open."""
+    site = (request.args.get("site") or "").strip()
+    fetch = _RANDOM_FETCHERS.get(site)
+    if fetch is None:
+        return jsonify({"error": f"No random listing for {site or 'that site'}"}), 400
+    try:
+        results = _cached(f"random:{site}", fetch, raise_errors=True)
+    except Exception as exc:
+        logger.warning("Random fetch on %s failed (%s)", site, type(exc).__name__)
+        return jsonify({"error": f"Failed to fetch a random title from {site}"}), 502
+    if not results:
+        return jsonify({"error": f"No titles to pick from on {site}"}), 500
+    return jsonify({"url": random.choice(results)["url"]})
 
 
 def proxy_image():
@@ -290,7 +302,7 @@ def downloaded_folders():
 # ---------------------------------------------------------------------------
 def genres():
     """The genre list for the discover row of whichever site is open."""
-    site = (request.args.get("site") or "aniworld").strip()
+    site = (request.args.get("site") or "nineanime").strip()
     if site not in sitesearch.GENRE_SITES:
         return jsonify({"genres": []})
     results = _cached(f"genres:{site}", lambda: sitesearch.genres(site))
@@ -300,29 +312,16 @@ def genres():
 
 
 def _genre_page(site, slug, page):
-    """One page worth of a genre listing, plus whether another one follows.
+    """One page of a site's genre listing, plus whether another one follows.
 
-    AniWorld pages its own genre listing. The other sites hand back a single
-    flat list, so ask for one title more than the page needs: that both fills
-    the page and settles whether there is anything behind it.
+    Only sites in GENRE_SITES reach this; the view rejects the rest first.
     """
-    if site == "aniworld":
-        return fetch_genre_animes(slug, page)
-
-    end = page * GENRE_PAGE_SIZE
-    results, has_more = sitesearch.genre_results(site, slug, end + 1)
-    return {
-        "results": [
-            {"title": item["title"], "url": item["url"], "poster_url": item["poster"]}
-            for item in results[end - GENRE_PAGE_SIZE : end]
-        ],
-        "has_more": has_more,
-    }
+    return fetch_genre_animes(slug, page)
 
 
 def genre():
-    """One page of a genre listing, 30 titles per page."""
-    site = (request.args.get("site") or "aniworld").strip()
+    """One page of a genre listing."""
+    site = (request.args.get("site") or "nineanime").strip()
     slug = (request.args.get("slug") or "").strip()
     if not slug or any(char in slug for char in "/\\") or slug in {".", ".."}:
         return jsonify({"error": "Invalid genre slug"}), 400
@@ -368,8 +367,6 @@ def genre():
 # Browse rows
 # ---------------------------------------------------------------------------
 _BROWSE_ROWS = (
-    ("/new-animes", "new_animes", fetch_new_animes),
-    ("/popular-animes", "popular_animes", fetch_popular_animes),
     ("/nineanime-latest", "nineanime_latest", fetch_nineanime_latest),
     ("/nineanime-popular", "nineanime_popular", fetch_nineanime_popular),
     ("/miruro-latest", "miruro_latest", fetch_miruro_latest),

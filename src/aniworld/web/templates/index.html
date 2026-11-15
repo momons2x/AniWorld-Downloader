@@ -9,9 +9,6 @@
       <div class="segmented-thumb" id="segmentedThumb"></div>
       {# Every site can be switched off in the settings. The first one still
       standing is the one the page opens on, see home.js. #}
-      {% if sites.aniworld %}
-      <button class="segmented-btn" data-site="aniworld">AniWorld</button>
-      {% endif %}
     {% if sites.nineanime %}
     <button class="segmented-btn" data-site="nineanime">9anime</button>
     {% endif %}
@@ -26,7 +23,7 @@
   </div>
 
   <div class="search-bar">
-    <input type="text" id="searchInput" placeholder="Search AniWorld..." autofocus />
+    <input type="text" id="searchInput" placeholder="Search..." autofocus />
     <button class="btn btn-primary" id="searchBtn" data-i18n="index.search">Search</button>
     <button class="btn btn-secondary" id="randomBtn" data-i18n="index.random">Random</button>
   </div>
@@ -74,16 +71,6 @@
   </div>
 
   <div id="browse">
-    {% if sites.aniworld %}
-    <section class="browse-section" data-row="new_animes" data-sites="aniworld">
-      <h2 class="browse-heading" data-i18n="browse.new_animes">New Animes</h2>
-      <div class="browse-grid"></div>
-    </section>
-    <section class="browse-section" data-row="popular_animes" data-sites="aniworld">
-      <h2 class="browse-heading" data-i18n="browse.popular_animes">Popular Animes</h2>
-      <div class="browse-grid"></div>
-    </section>
-    {% endif %}
     {% if sites.nineanime %}
     <section class="browse-section" data-row="nineanime_latest" data-sites="nineanime">
       <h2 class="browse-heading" data-i18n="browse.nineanime_latest">Latest on 9anime</h2>
@@ -227,7 +214,6 @@
 <script id="site-config" type="application/json">
   {{ {
     "SITE_LANGUAGES": {
-      "aniworld": lang_labels.values() | list,
       "nineanime": ["English Sub", "English Dub"],
       "miruro": ["English Sub", "English Dub"],
       "reanime": ["English Sub", "English Dub"]

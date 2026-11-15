@@ -101,7 +101,6 @@ def test_reanime_search_builds_series_urls(monkeypatch):
 
 def test_every_site_tab_has_a_search_backend():
     assert set(sitesearch.SITE_SEARCH) >= {
-        "aniworld",
         "nineanime",
         "miruro",
         "reanime",

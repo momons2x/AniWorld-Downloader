@@ -68,3 +68,47 @@ def fetch_latest_animes(limit=30):
 def fetch_popular_animes(limit=30):
     """The site's own most-watched page."""
     return _parse_articles(get_html(POPULAR_URL, timeout=25), limit)
+
+
+# Every listing page tags its titles with their genres, so one scrape of the
+# front page is enough to read off the whole vocabulary the site uses.
+_GENRE_LINK_RE = re.compile(
+    r'<a[^>]+href="[^"]*/genres/([^"/]+)/?"[^>]*>(.*?)</a>', re.DOTALL
+)
+
+
+def fetch_genres(limit=200):
+    """Genre names and slugs, read off the front page's genre tags.
+
+    Returns [{name, slug}] in the order the page lists them, deduplicated.
+    """
+    html = get_html(f"{BASE_URL}/", timeout=25)
+    genres = []
+    seen = set()
+    for slug, label in _GENRE_LINK_RE.findall(html):
+        name = _clean_title(re.sub(r"<[^>]+>", "", unescape(label)))
+        if not name or slug in seen:
+            continue
+        seen.add(slug)
+        genres.append({"name": name, "slug": slug})
+        if len(genres) >= limit:
+            break
+    return genres
+
+
+def fetch_genre_animes(slug, page=1, limit=50):
+    """One page of a genre listing as {"results": [...], "has_more": bool}.
+
+    The site serves a fixed number of cards per page and links the next one
+    only while there is one, so the pager link is what settles has_more.
+    """
+    safe_slug = quote(str(slug), safe="")
+    url = f"{BASE_URL}/genres/{safe_slug}/"
+    if page > 1:
+        url = f"{url}page/{page}/"
+
+    html = get_html(url, timeout=25)
+    return {
+        "results": _parse_articles(html, limit),
+        "has_more": f"/genres/{safe_slug}/page/{page + 1}/" in html,
+    }

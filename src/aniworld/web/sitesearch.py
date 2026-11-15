@@ -1,43 +1,27 @@
 """Site search plumbing shared by the web search API and the Discord bot.
 
 Each site's search returns a slightly different shape, this normalises them all
-to {title, url} and filters out season/episode links so only series-level hits
-come back.
+to {title, url, poster} so callers never have to care which site answered.
 """
-
-import re
 
 from ..logger import get_logger
 from ..models.miruro._api import query_animes as query_miruro
+from ..models.nineanime._api import fetch_genres
 from ..models.nineanime._api import query_animes as query_nineanime
 from ..models.reanime._api import query_animes as query_reanime
-from ..search import (
-    fetch_aniworld_genres,
-    query_aniworld,
-)
 
 logger = get_logger(__name__)
 
 # Each site searches through its own model package; the functions all return
 # [{title, url, poster_url}] so the normaliser below can pass them straight on.
 SITE_SEARCH = {
-    "aniworld": query_aniworld,
     "nineanime": query_nineanime,
     "miruro": query_miruro,
     "reanime": query_reanime,
 }
 
-# Aniworld returns relative `/.../<slug>` links, everything else returns an
-# absolute `url`. This one also needs series-only filtering.
-_RELATIVE_SITES = {
-    "aniworld": (
-        "https://aniworld.to",
-        re.compile(r"^/anime/stream/[a-zA-Z0-9\-]+/?$", re.IGNORECASE),
-    ),
-}
-
 # Sites checked for a Discord request, in priority order.
-SERIES_SITES = ("miruro", "reanime")
+SERIES_SITES = ("nineanime", "miruro", "reanime")
 MOVIE_SITES = ()
 
 
@@ -58,7 +42,7 @@ def _poster(item):
     return ""
 
 
-def _normalise(site, raw, fallback=""):
+def _normalise(raw, fallback=""):
     """Turn one site's raw hits into [{title, url, poster}], dropping the rest."""
     if isinstance(raw, dict):
         raw = [raw]
@@ -67,7 +51,7 @@ def _normalise(site, raw, fallback=""):
     for item in raw:
         if not isinstance(item, dict):
             continue
-        url = _resolve_url(site, item)
+        url = _resolve_url(item)
         if not url:
             continue
         results.append(
@@ -93,61 +77,27 @@ def search(site, keyword, *, raise_errors=False):
         if raise_errors:
             raise
         return []
-    return _normalise(site, raw, keyword)
+    return _normalise(raw, keyword)
 
 
-def _resolve_url(site, item):
-    url = item.get("url")
-    if url:
-        return url
-
-    link = item.get("link")
-    if not link:
-        return None
-    base, pattern = _RELATIVE_SITES.get(site, (None, None))
-    if base is None:
-        return link
-    # Skip season/episode links, only series pages belong in results
-    return base + link if pattern.match(link) else None
+def _resolve_url(item):
+    """A hit's series URL, or None when the site only offered a relative link."""
+    return item.get("url") or item.get("link")
 
 
-# Every site whose genre listing the Web UI can offer.
+# Every site whose genre listing the Web UI can offer. 9anime pages its own
+# genre URLs; the other two have no genre backend of their own.
 GENRE_LISTS = {
-    "aniworld": fetch_aniworld_genres,
+    "nineanime": fetch_genres,
 }
 
 GENRE_SITES = tuple(GENRE_LISTS)
-
-# AniWorld is missing here on purpose: the site pages its own genre listing, so
-# it goes through fetch_genre_animes(). Everything else returns one flat list
-# that limit cuts off, and the caller slices it into pages.
-GENRE_QUERIES = {}
 
 
 def genres(site):
     """The genre chips for a site, as [{name, slug}]."""
     fetch = GENRE_LISTS.get(site)
     return fetch() if fetch else []
-
-
-def genre_results(site, genre, limit):
-    """Browse one site's genre, normalised like a search result.
-
-    Returns (results, has_more). The flag counts the site's own hits, before
-    normalising drops the ones the app cannot open afterwards: a site listing
-    the odd title under a slug no provider pattern accepts would otherwise
-    read as the end of the listing.
-
-    Failures propagate on purpose: an empty genre is worth telling apart from a
-    site that would not answer, which a browse row cannot do.
-    """
-    query = GENRE_QUERIES.get(site)
-    if not query:
-        return [], False
-    raw = query(genre, limit) or []
-    if isinstance(raw, dict):
-        raw = [raw]
-    return _normalise(site, raw), len(raw) >= limit
 
 
 def aggregate(title, media_type, per_site=8, limit=25):

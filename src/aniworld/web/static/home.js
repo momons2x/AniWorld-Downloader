@@ -56,7 +56,6 @@
   const SCRAPE_TIMEOUT_MS = 60000;
 
   const SEARCH_PLACEHOLDERS = {
-    aniworld: "Search AniWorld...",
     nineanime: "Search 9anime...",
     miruro: "Search Miruro...",
     reanime: "Search Re:Anime...",
@@ -72,7 +71,7 @@
 
   // Any site can be switched off in the settings, so the page opens on the
   // first tab that is actually there rather than on a fixed one
-  const firstSite = () => (siteButtons[0] ? siteButtons[0].dataset.site : "aniworld");
+  const firstSite = () => (siteButtons[0] ? siteButtons[0].dataset.site : "nineanime");
 
   let currentSite = firstSite();
   let downloadedFolders = [];
@@ -283,7 +282,7 @@
     siteButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.site === site));
     moveThumb();
     searchInput.placeholder = SEARCH_PLACEHOLDERS[site] || "Search...";
-    randomBtn.hidden = site !== "aniworld";
+    randomBtn.hidden = site === "local";
     resultsGrid.innerHTML = "";
     searchInput.value = "";
     resetGenre();
@@ -732,7 +731,7 @@
 
   function rebuildLanguageOptions() {
     const languages = (
-      window.SITE_LANGUAGES[currentSite] || window.SITE_LANGUAGES.aniworld
+      window.SITE_LANGUAGES[currentSite] || window.SITE_LANGUAGES.nineanime
     ).filter((language) => !(window.ENGLISH_SUB_DISABLED && language === "English Sub"));
     languageSelect.innerHTML = languages
       .map((language) => `<option value="${esc(language)}">${esc(language)}</option>`)

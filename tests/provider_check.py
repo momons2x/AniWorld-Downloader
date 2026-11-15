@@ -5,7 +5,7 @@ this helper, and Ruff checks the scripts without contacting providers.
 
 One file per source site lives next to this one:
 
-    tests/test_providers_aniworld.py
+    tests/test_providers_sites.py
 
 and one that checks the hosters on their own, independent of any site:
 
@@ -82,6 +82,35 @@ def is_stub(fn):
     except Exception:
         return False
     return False
+
+
+def fetchers():
+    """Every named fetcher a live check can ask for, by name.
+
+    The three live sites keep their front page listing and their search in
+    their own model package, so the names are looked up here rather than on
+    aniworld.search, which now only holds the terminal search menu.
+    """
+    from aniworld.models.miruro._api import fetch_latest_animes as miruro_latest
+    from aniworld.models.miruro._api import query_animes as miruro_search
+    from aniworld.models.nineanime._api import fetch_latest_animes as nineanime_latest
+    from aniworld.models.nineanime._api import query_animes as nineanime_search
+    from aniworld.models.reanime._api import fetch_latest_animes as reanime_latest
+    from aniworld.models.reanime._api import query_animes as reanime_search
+
+    return {
+        "fetch_nineanime_latest": nineanime_latest,
+        "fetch_miruro_latest": miruro_latest,
+        "fetch_reanime_latest": reanime_latest,
+        "query_nineanime": nineanime_search,
+        "query_miruro": miruro_search,
+        "query_reanime": reanime_search,
+    }
+
+
+def find_fetcher(fetch_name):
+    """Resolve a fetch name against the site models, then this module."""
+    return fetchers().get(fetch_name) or globals().get(fetch_name)
 
 
 # ---------------------------------------------------------------------------
@@ -207,14 +236,12 @@ def run_site(site_name, fetch_name, only=None):
     The title is discovered live rather than hardcoded, so a title being taken
     down cannot quietly turn this check into a no-op.
     """
-    from aniworld import search
-
     registry = extractors()
     stubs = {k for k, v in registry.items() if is_stub(v["direct"])}
     results = []
 
     print(f"\n=== {site_name} ===\n")
-    fetch = getattr(search, fetch_name, None) or globals().get(fetch_name)
+    fetch = find_fetcher(fetch_name)
     if fetch is None:
         line(FAIL, site_name, f"no fetcher named {fetch_name}")
         return 1
@@ -293,12 +320,10 @@ def run_stream_site(site_name, fetch_name, keyword=None):
     Doodstream, so walking a hoster map would report "no hosters" and prove
     nothing.
     """
-    from aniworld import search
-
     results = []
 
     print(f"\n=== {site_name} ===\n")
-    fetch = getattr(search, fetch_name, None) or globals().get(fetch_name)
+    fetch = find_fetcher(fetch_name)
     if fetch is None:
         line(FAIL, site_name, f"no fetcher named {fetch_name}")
         return 1

@@ -8,6 +8,9 @@ on:
 jobs:
   pypi-publish:
     name: Upload release to PyPI
+    # The PyPI trusted publisher is registered against the upstream repository,
+    # so a release cut anywhere else would only ever fail here.
+    if: github.repository == 'phoenixthrush/AniWorld-Downloader'
     runs-on: ubuntu-latest
     environment:
       name: pypi

@@ -481,7 +481,7 @@ def _tabs(client):
 
 def test_the_home_page_shows_the_sites_that_are_on(client):
     tabs = _tabs(client)
-    assert "aniworld" in tabs and "miruro" in tabs
+    assert "nineanime" in tabs and "miruro" in tabs
     assert "htv" not in tabs, "adult content is off unless asked for"
     assert "hentaihaven" not in tabs
 
@@ -495,7 +495,7 @@ def test_a_site_switched_off_loses_its_browse_rows(client, monkeypatch):
     monkeypatch.setenv("ANIWORLD_ENABLE_MIRURO", "0")
     body = client.get("/").get_data(as_text=True)
     assert 'data-row="miruro_latest"' not in body
-    assert 'data-row="new_animes"' in body, "the others stay"
+    assert 'data-row="nineanime_latest"' in body, "the others stay"
 
 
 def test_the_adult_flags_change_nothing(client, monkeypatch):
@@ -507,8 +507,8 @@ def test_the_adult_flags_change_nothing(client, monkeypatch):
 
 def test_the_first_tab_is_whatever_is_still_there(client, monkeypatch):
     """home.js opens on the first tab, so it must not be a hidden one."""
-    monkeypatch.setenv("ANIWORLD_ENABLE_ANIWORLD", "0")
-    assert _tabs(client)[0] == "nineanime"
+    monkeypatch.setenv("ANIWORLD_ENABLE_NINEANIME", "0")
+    assert _tabs(client)[0] == "miruro"
 
 
 def test_the_toggles_on_the_settings_page_match_the_api(client):

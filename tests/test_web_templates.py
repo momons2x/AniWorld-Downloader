@@ -22,7 +22,6 @@ def _site_config(client):
 @pytest.mark.parametrize(
     ("site", "languages"),
     [
-        ("aniworld", ["English Sub", "English Dub", "Indonesian Sub"]),
         ("nineanime", ["English Sub", "English Dub"]),
         ("miruro", ["English Sub", "English Dub"]),
         ("reanime", ["English Sub", "English Dub"]),

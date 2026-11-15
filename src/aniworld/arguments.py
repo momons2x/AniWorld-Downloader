@@ -23,19 +23,19 @@ Command-Line Examples
 AniWorld Downloader supports direct downloads, playback, interactive search, and the Web UI.
 
 Example 1: Download a Single Episode (default action)
-To download episode 1 of "Demon Slayer: Kimetsu no Yaiba":
-aniworld --no-menu https://aniworld.to/anime/stream/demon-slayer-kimetsu-no-yaiba/staffel-1/episode-1
+To download episode 1 of "Even the Student Council Has Its Holes":
+aniworld --no-menu https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/1
 
 Example 2: Download Multiple Episodes (default action)
-To download multiple episodes of "Demon Slayer":
+To download multiple episodes of "Even the Student Council Has Its Holes":
 aniworld --no-menu \
-  https://aniworld.to/anime/stream/demon-slayer-kimetsu-no-yaiba/staffel-1/episode-1 \
-  https://aniworld.to/anime/stream/demon-slayer-kimetsu-no-yaiba/staffel-1/episode-2
+  https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/1 \
+  https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/2
 
 Example 3: Watch Episodes with Aniskip
 To watch an episode while skipping intros and outros:
 aniworld --no-menu --action Watch --aniskip \
-  https://aniworld.to/anime/stream/demon-slayer-kimetsu-no-yaiba/staffel-1/episode-1
+  https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/1
 
 Example 4: Syncplay with Friends (+ Keep Watching)
 To Syncplay a specific episode with friends:
@@ -43,31 +43,31 @@ aniworld --no-menu --action Syncplay --keep-watching \
   --syncplay-host syncplay.pl:8998 \
   --syncplay-room "MyRoom" \
   --syncplay-username "phoenixthrush" \
-  https://aniworld.to/anime/stream/demon-slayer-kimetsu-no-yaiba/staffel-1/episode-1
+  https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/1
 
 Language Options for Syncplay
 
 For Indonesian Sub:
 aniworld --no-menu --action Syncplay --keep-watching --language "Indonesian Sub" --aniskip \
   --syncplay-host syncplay.pl:8998 --syncplay-room "MyRoom" --syncplay-username "phoenixthrush" \
-  https://aniworld.to/anime/stream/demon-slayer-kimetsu-no-yaiba/staffel-1/episode-1
+  https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/1
 
 For English Sub:
 aniworld --no-menu --action Syncplay --keep-watching --language "English Sub" --aniskip \
   --syncplay-host syncplay.pl:8998 --syncplay-room "MyRoom" --syncplay-username "phoenixthrush" \
-  https://aniworld.to/anime/stream/demon-slayer-kimetsu-no-yaiba/staffel-1/episode-1
+  https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/1
 
 To derive a room name from the episode filename and a shared value:
 Leave --syncplay-room unset; this is not a Syncplay server password.
 aniworld --no-menu --action Syncplay --keep-watching --language "English Sub" --aniskip \
   --syncplay-host syncplay.pl:8998 --syncplay-username "phoenixthrush" \
   --syncplay-password beans \
-  https://aniworld.to/anime/stream/demon-slayer-kimetsu-no-yaiba/staffel-1/episode-1
+  https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/1
 
 Example 5: Download with Specific Provider and Language (default action)
-To download using the VOE provider with English subtitles:
-aniworld --no-menu --provider VOE --language "English Sub" \
-  https://aniworld.to/anime/stream/demon-slayer-kimetsu-no-yaiba/staffel-1/episode-1
+To download using the MiruroHop provider with English subtitles:
+aniworld --no-menu --provider MiruroHop --language "English Sub" \
+  https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/1
 
 Example 6: Use an Episode File (default action)
 To download URLs listed in a file:
@@ -82,24 +82,24 @@ aniworld --provider VOE --provider-url "https://voe.sx/e/example"
 Example 8: Choose a Download Folder and Action
 Set the download folder explicitly:
 aniworld --no-menu --action Download --output "./downloads" \
-  https://aniworld.to/anime/stream/demon-slayer-kimetsu-no-yaiba/staffel-1/episode-1
+  https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/1
 
-Example 9: Pick a Random Anime
-Pick a random AniWorld title, then choose episodes in the terminal menu:
+Example 9: Pick a Random Series
+Pick a random series from the supported sites, then choose episodes in the terminal menu:
 aniworld --random-anime
 
 Example 11: Configure Anime4K for Playback
 Install the high-end GPU shaders and watch an episode:
 aniworld --no-menu --action Watch --anime4k High \
-  https://aniworld.to/anime/stream/demon-slayer-kimetsu-no-yaiba/staffel-1/episode-1
+  https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/1
 
 Use the low-end GPU shaders instead:
 aniworld --no-menu --action Watch --anime4k Low \
-  https://aniworld.to/anime/stream/demon-slayer-kimetsu-no-yaiba/staffel-1/episode-1
+  https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/1
 
 Remove the Anime4K shaders before watching:
 aniworld --no-menu --action Watch --anime4k Remove \
-  https://aniworld.to/anime/stream/demon-slayer-kimetsu-no-yaiba/staffel-1/episode-1
+  https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/1
 
 Anime4K configures MPV playback shaders; it does not upscale downloaded files.
 
@@ -125,7 +125,7 @@ aniworld --web-ui --web-force-sso
 Example 16: Enable Debug Logging
 Download an episode with detailed logs:
 aniworld --no-menu --debug \
-  https://aniworld.to/anime/stream/demon-slayer-kimetsu-no-yaiba/staffel-1/episode-1
+  https://miruro.tv/watch/P6joTcOcZ5MAg745EfyST5b3IZR8Vs9w/even-the-student-council-has-its-holes/episode/1
 
 Example 17: Show Help, Version, or Examples
 Show the complete argument reference:
@@ -139,7 +139,7 @@ aniworld --examples
 
 Notes
 - --aniskip and --keep-watching can be combined with Watch and Syncplay.
-- Download is the default action. --no-menu processes URLs directly.
+- Download is the default action. --no-menu processes the given URLs directly and never prompts.
 - URLs are positional arguments, so you can paste one or many at the end of the command.
 - The selected language must be available for the episode.
 - The preferred provider is tried first, with fallback to other available providers.
@@ -153,9 +153,9 @@ def parse_args():
         prog="aniworld",
         description=(
             "AniWorld Downloader is a cross-platform tool for streaming and "
-            "downloading anime from aniworld.to, as well as movies and series "
-            "from serienstream.to. It runs on Windows, macOS, and Linux, providing a "
-            "seamless experience for offline viewing or instant playback."
+            "downloading anime from 9anime, Miruro, and Re:Anime. It runs on "
+            "Windows, macOS, and Linux, providing a seamless experience for "
+            "offline viewing or instant playback."
         ),
         epilog='Run "aniworld --examples" to see more usage examples.',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -178,7 +178,7 @@ def parse_args():
         "-nm",
         "--no-menu",
         action="store_true",
-        help="Disable interactive menu",
+        help="Require URLs on the command line instead of prompting for one",
     )
     general.add_argument(
         "-x",

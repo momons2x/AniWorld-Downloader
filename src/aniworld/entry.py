@@ -157,72 +157,12 @@ def aniworld():
         from .search import search
 
         url = args.url[0] if args.url else search()
-
-        # FIX: replace s.to with serienstream.to to avoid issues with s.to being down
-        url = url.replace("://s.to", "://serienstream.to")
-        url = normalize_url(url)
-
-        provider = resolve_provider(url)
-
-        # If provider is NOT AniWorld -> bypass menu
-        if provider.name != "AniWorld" and provider.name != "SerienStream":
-            obj = model_for_url(url)
-            run_action(obj, action)
-            return 0
-
-        # If AniWorld but URL is episode OR season -> bypass menu too
-        if provider.episode_pattern.fullmatch(url) or provider.season_pattern.fullmatch(
-            url
-        ):
-            obj = (
-                provider.episode_cls(url=url)
-                if provider.episode_pattern.fullmatch(url)
-                else provider.season_cls(url=url)
-            )
-            run_action(obj, action)
-            return 0
-
-        # AniWorld series -> show menu
-        from .menu import app
-
-        result = app(url=url)
-        if not result:
+        if not url:
+            # The search prompt was answered with nothing, or cancelled
             return 130
 
-        action = result.get("action")
-        episodes = result.get("episodes", [])
-        selected_path = result.get("path")
-        selected_language = result.get("language")
-        selected_provider = result.get("provider")
-
-        os.environ["ANIWORLD_ANISKIP"] = "1" if result.get("aniskip") else "0"
-
-        if action in ACTION_METHODS:
-            method_name = ACTION_METHODS[action]
-            built = []
-            failures = []
-
-            # Building an episode hits the network too, so a title that has gone
-            # missing has to be survivable in the same way the action itself is.
-            for episode_url in episodes:
-                try:
-                    built.append(
-                        provider.episode_cls(
-                            url=episode_url,
-                            selected_path=selected_path,
-                            selected_language=selected_language,
-                            selected_provider=selected_provider,
-                        )
-                    )
-                except Exception as exc:
-                    logger.error("Could not load %s: %s", episode_url, exc)
-                    failures.append((episode_url, exc))
-
-            failures.extend(run_each(built, method_name))
-            if failures:
-                # Non-zero so scripts and cron jobs still notice an incomplete run
-                return 1
-
+        obj = model_for_url(url)
+        run_action(obj, action)
         return 0
 
     except KeyboardInterrupt:

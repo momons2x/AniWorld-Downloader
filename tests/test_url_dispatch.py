@@ -9,7 +9,7 @@ from unittest.mock import Mock
 import provider_check as checks
 import pytest
 
-from aniworld import entry, menu
+from aniworld import entry
 from aniworld.providers import resolve_provider
 from aniworld.web import db, discord_bot, worker
 from aniworld.web.views import api_media
@@ -109,23 +109,20 @@ def test_cli_dispatch_uses_normalized_urls(
     monkeypatch.setattr(sys, "argv", ["aniworld", *argv])
     lookup = Mock(return_value=site_provider.provider)
     monkeypatch.setattr(entry, "resolve_provider", lookup)
-    show_menu = Mock(return_value=None)
-    monkeypatch.setattr(menu, "app", show_menu)
+    search_for = Mock(return_value=SERIES)
+    monkeypatch.setattr("aniworld.search.search", search_for)
 
     result = entry.aniworld()
 
     expected = SERIES + suffix
     assert lookup.called
     assert all(call.args == (expected,) for call in lookup.call_args_list)
-    if mode == "interactive" and kind == "series":
-        assert result == 130
-        show_menu.assert_called_once_with(url=expected)
-    else:
-        assert result == 0
-        factory = getattr(site_provider, kind)
-        factory.assert_called_once_with(url=expected)
-        factory.return_value.download.assert_called_once_with()
-        show_menu.assert_not_called()
+    assert result == 0
+    factory = getattr(site_provider, kind)
+    factory.assert_called_once_with(url=expected)
+    factory.return_value.download.assert_called_once_with()
+    # A URL on the command line never falls through to the search prompt
+    search_for.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -176,10 +173,6 @@ def test_worker_dispatch_uses_normalized_urls(
     lookup.assert_called_once_with(EPISODE)
     assert site_provider.episode.call_args.kwargs["url"] == EPISODE
     site_provider.episode.return_value.download.assert_called_once_with()
-
-
-def test_menu_normalizes_urls_before_loading_models():
-    assert menu.MenuApp(f" {SERIES}/ ").url == SERIES
 
 
 def test_discord_dispatch_normalizes_series_urls(monkeypatch, site_provider):

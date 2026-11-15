@@ -80,7 +80,7 @@ For CAPTCHA browser visibility, manual solving, timeouts, and debug logs, see [C
 
 ## Supported Sites
 
-These three sites have working download providers, and each one gets its own tab on the home page with browse rows (newest, popular, trending) read straight from that site. A legacy **AniWorld** tab is still rendered, but its titles no longer resolve to a provider.
+These three sites have working download providers, and each one gets its own tab on the home page with browse rows (newest, popular, trending) read straight from that site. The **Random** button draws a series from whichever tab you are on, and running `aniworld` with no URL searches all three sites at once.
 
 | Site | Base URL | Content | Languages |
 | --- | --- | --- | --- |
@@ -88,7 +88,7 @@ These three sites have working download providers, and each one gets its own tab
 | Miruro | `https://miruro.tv` | Anime and anime movies | English Sub, English Dub |
 | Re:Anime | `https://reanime.to` | Anime and anime movies | English Sub, English Dub |
 
-Turn a site off in **Settings → Sites** to remove its tab and rows. See the [supported sites documentation](https://www.phoenixthrush.com/AniWorld-Downloader-Docs/supported-sites) for live-check details and IP/VPN differences.
+Turn a site off in **Settings → Sites** to remove its tab and rows. Genre browsing is **9anime-only** — Miruro and Re:Anime expose no genre listing of their own, so their tabs show no genre bar. See the [supported sites documentation](https://www.phoenixthrush.com/AniWorld-Downloader-Docs/supported-sites) for live-check details and IP/VPN differences.
 
 ### Stream Hosters
 

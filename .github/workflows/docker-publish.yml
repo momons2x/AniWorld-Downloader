@@ -25,7 +25,9 @@ env:
 
 jobs:
   build:
-
+    # Releases only publish from upstream; docker-compose pulls that image.
+    # A manual run on a fork still builds, and can push to its own ghcr on ask.
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'phoenixthrush/AniWorld-Downloader'
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -40,14 +40,12 @@ _PROVIDER_BY_LOWER = {p.lower(): p for p in WORKING_PROVIDERS}
 # ---------------------------------------------------------------------------
 # Site keys the front-end uses. Custom paths can be the default for any of them.
 SITE_KEYS = (
-    "aniworld",
     "nineanime",
     "miruro",
     "reanime",
 )
 
 SITE_LABELS = {
-    "aniworld": "AniWorld",
     "nineanime": "9anime",
     "miruro": "Miruro",
     "reanime": "Re:Anime",
@@ -56,7 +54,6 @@ SITE_LABELS = {
 # The order the tabs appear in on the home page, which is not the order the
 # keys happen to be declared in above.
 SITE_ORDER = (
-    "aniworld",
     "nineanime",
     "miruro",
     "reanime",

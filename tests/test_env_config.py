@@ -118,7 +118,7 @@ def test_cli_and_other_settings_survive_startup(tmp_path, monkeypatch):
     env = tmp_path / ".env"
     values = {
         "ANIWORLD_NO_MENU": "1",
-        "ANIWORLD_MENU_DOWNLOAD_ONLY": "1",
+        "ANIWORLD_NO_AUTO_INSTALL": "1",
         "ANIWORLD_KEEP_WATCHING": "1",
         "ANIWORLD_ENABLE_NINEANIME": "0",
     }

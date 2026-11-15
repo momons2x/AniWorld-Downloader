@@ -48,7 +48,6 @@ def test_read_settings_never_leaks_the_discord_token(monkeypatch):
         ("show_all_languages", "ANIWORLD_SHOW_ALL_LANGUAGES"),
         ("enable_library", "ANIWORLD_ENABLE_LIBRARY"),
         ("enable_autosync", "ANIWORLD_ENABLE_AUTOSYNC"),
-        ("enable_aniworld", "ANIWORLD_ENABLE_ANIWORLD"),
         ("movie_folder", "ANIWORLD_MOVIE_FOLDER"),
     ],
 )
@@ -83,7 +82,6 @@ def test_every_site_can_be_switched_off():
 def test_which_sites_a_fresh_install_shows():
     """Sites requiring opt-in stay off."""
     assert settings_store.enabled_sites() == {
-        "aniworld": True,
         "nineanime": True,
         "miruro": True,
         "reanime": True,
@@ -94,13 +92,13 @@ def test_a_site_reads_back_out_of_the_settings():
     update_settings({"enable_miruro": False})
     settings = settings_store.read_settings()
     assert settings["enable_miruro"] is False
-    assert settings["enable_aniworld"] is True
+    assert settings["enable_nineanime"] is True
 
 
 def test_the_page_is_told_which_sites_exist():
     sites = settings_store.read_settings()["available_sites"]
     assert {site["key"] for site in sites} == set(settings_store.enabled_sites())
-    assert {"key": "aniworld", "label": "AniWorld", "default_on": True} in sites
+    assert {"key": "nineanime", "label": "9anime", "default_on": True} in sites
 
 
 def test_the_last_site_cannot_be_switched_off():
@@ -116,8 +114,8 @@ def test_the_last_site_cannot_be_switched_off():
 def test_switching_off_all_but_one_is_fine():
     from aniworld.web.media import SITE_KEYS
 
-    update_settings({f"enable_{site}": site == "aniworld" for site in SITE_KEYS})
-    assert settings_store.enabled_sites()["aniworld"] is True
+    update_settings({f"enable_{site}": site == "nineanime" for site in SITE_KEYS})
+    assert settings_store.enabled_sites()["nineanime"] is True
     assert sum(settings_store.enabled_sites().values()) == 1
 
 

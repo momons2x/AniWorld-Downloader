@@ -137,7 +137,6 @@ ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     ANIWORLD_DOWNLOAD_PATH=/app/Downloads \
-    ANIWORLD_MENU_DOWNLOAD_ONLY=1 \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
     NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 
@@ -169,7 +168,6 @@ ENV PATH="/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     ANIWORLD_DOWNLOAD_PATH=/app/Downloads \
-    ANIWORLD_MENU_DOWNLOAD_ONLY=1 \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
     NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 

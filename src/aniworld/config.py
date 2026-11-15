@@ -168,7 +168,6 @@ GLOBAL_SESSION = Session(
         "Sec-Fetch-Mode": "navigate",
         "User-Agent": DEFAULT_USER_AGENT,
         "Accept-Encoding": "gzip, deflate, br",
-        "Referer": "https://aniworld.to/search",
         "Priority": "u=0, i",
     },
 )

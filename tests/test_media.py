@@ -63,11 +63,11 @@ def test_every_site_key_has_a_label():
 
 
 def test_known_sites_are_kept_in_order():
-    assert media.normalize_default_sites(["aniworld", "miruro"]) == "aniworld,miruro"
+    assert media.normalize_default_sites(["nineanime", "miruro"]) == "nineanime,miruro"
 
 
 def test_unknown_sites_are_dropped():
-    assert media.normalize_default_sites(["aniworld", "myspace"]) == "aniworld"
+    assert media.normalize_default_sites(["nineanime", "myspace"]) == "nineanime"
 
 
 def test_duplicates_are_dropped():
@@ -75,11 +75,14 @@ def test_duplicates_are_dropped():
 
 
 def test_case_and_whitespace_do_not_matter():
-    assert media.normalize_default_sites([" AniWorld ", "MIRURO"]) == "aniworld,miruro"
+    assert (
+        media.normalize_default_sites([" NineAnime ", "MIRURO"])
+        == "nineanime,miruro"
+    )
 
 
 def test_a_csv_string_works_too():
-    assert media.normalize_default_sites("aniworld,nineanime") == "aniworld,nineanime"
+    assert media.normalize_default_sites("miruro,reanime") == "miruro,reanime"
 
 
 @pytest.mark.parametrize("empty", [None, "", [], "   "])
@@ -215,7 +218,7 @@ def test_adult_sites_are_never_rendered(client, monkeypatch):
     assert 'data-site="htv"' not in body
     assert 'data-site="hentaihaven"' not in body
     # the sites nobody gated are still there
-    assert 'data-site="aniworld"' in body
+    assert 'data-site="nineanime"' in body
 
 
 def test_hiding_a_tab_leaves_its_neighbours_alone(client):
@@ -226,8 +229,6 @@ def test_hiding_a_tab_leaves_its_neighbours_alone(client):
     """
     body = client.get("/").get_data(as_text=True)
     rows = {
-        "new_animes": "aniworld",
-        "popular_animes": "aniworld",
         "nineanime_latest": "nineanime",
         "nineanime_popular": "nineanime",
         "miruro_latest": "miruro",

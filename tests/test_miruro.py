@@ -127,17 +127,17 @@ def test_track_language():
     assert track_language("raw") is None
 
 
-def test_stream_candidates_prefers_hop_and_maps_providers():
+def test_stream_candidates_prefers_sun_and_maps_providers():
     candidates = _stream_candidates(SOURCES["tracks"][0])
     names = [name for name, _url in candidates]
-    assert names[0] == "MiruroHop"
+    assert names[0] == "MiruroSun"
+    assert "MiruroHop" in names
     assert "MiruroBee" in names
-    assert "MiruroSun" in names
     assert "MiruroBun" not in names  # no usable bun stream
-    assert candidates[0][1] == "https://hop.example/master.m3u8"
+    assert candidates[0][1] == "https://sun.example/stream.m3u8"
     named = dict(candidates)
+    assert named["MiruroHop"] == "https://hop.example/master.m3u8"
     assert named["MiruroBee"] == "https://bee.example/master.m3u8"
-    assert named["MiruroSun"] == "https://sun.example/stream.m3u8"
 
 
 def test_media_id_parsing():
@@ -183,8 +183,8 @@ def test_episode_provider_data_and_skip_times(monkeypatch):
     assert episode.episode_number == 1
     assert episode.language == "English Sub"
     assert isinstance(episode.provider_data, ProviderData)
-    assert episode.available_providers() == ("MiruroHop", "MiruroBee", "MiruroSun")
-    assert episode.provider_attempt_order()[0] == "MiruroHop"
+    assert episode.available_providers() == ("MiruroSun", "MiruroHop", "MiruroBee")
+    assert episode.provider_attempt_order()[0] == "MiruroSun"
     assert episode.provider_link(provider="MiruroHop") == "https://hop.example/master.m3u8"
     assert episode.provider_link(provider="MiruroBee") == "https://bee.example/master.m3u8"
     assert episode.provider_link(provider="MiruroSun") == "https://sun.example/stream.m3u8"
@@ -242,4 +242,4 @@ def test_dub_episode_uses_dub_track(monkeypatch):
 def test_stream_url_passes_through_extractor(monkeypatch):
     _patch(monkeypatch)
     episode = MiruroEpisode(EPISODE_URL)
-    assert episode.stream_url == "https://hop.example/master.m3u8"
+    assert episode.stream_url == "https://sun.example/stream.m3u8"

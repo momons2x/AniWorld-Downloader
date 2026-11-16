@@ -56,7 +56,11 @@ from ._api import (
 ENGLISH_SUB = "English Sub"
 ENGLISH_DUB = "English Dub"
 
-_SERVER_PREFERENCE = ("MiruroHop", "MiruroBee", "MiruroSun", "MiruroBun")
+# Sun leads: it is first in Miruro's own providerOrder and the only server
+# verified to carry the full-length master on short-form titles, where the
+# other CDNs serve a fixed-length placeholder instead. Hop is second purely as
+# the historical first choice on titles that offer it.
+_SERVER_PREFERENCE = ("MiruroSun", "MiruroHop", "MiruroBee", "MiruroBun")
 
 _PROVIDER_BY_NAME = {
     "hop": "MiruroHop",
@@ -439,7 +443,7 @@ class MiruroEpisode:
         from ...config import PROVIDER_HEADERS_D
 
         tracks = (self._sources or {}).get("tracks") or []
-        order = ("hop", "bee", "bun", "sun")
+        order = ("sun", "hop", "bee", "bun")
         best = None
         for track in tracks:
             if track_language(track.get("track")) != self.selected_language:

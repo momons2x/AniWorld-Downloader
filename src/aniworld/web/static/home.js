@@ -824,7 +824,7 @@
 
       // The provider probe narrows the language/provider selects, so resolve it
       // before revealing or the dropdowns would visibly change afterwards
-      if (firstEpisodes.length && !fixed) {
+      if (firstEpisodes.length) {
         await fetchProviders(firstEpisodes[0].url);
         if (token !== openToken) return;
       }

@@ -140,14 +140,30 @@
           <div class="subtitle" ${subtitle ? "" : "hidden"}>${esc(subtitle)}</div>
         </div>
       </a>
-      <button
-        class="lib-hide-btn"
-        type="button"
-        data-action="toggle-hidden"
-        data-hidden="${hidden ? "1" : "0"}"
-        title="${attr(hideLabel)}"
-        aria-label="${attr(`${hideLabel} ${title}`)}"
-      >${hidden ? "👁" : "🙈"}</button>
+      <div class="lib-card-menu">
+        <button
+          class="lib-card-menu-btn"
+          type="button"
+          data-action="card-menu"
+          aria-haspopup="true"
+          aria-expanded="false"
+          title="${attr(t("library.actions", "Actions"))}"
+          aria-label="${attr(`${t("library.actions", "Actions")} ${title}`)}"
+        >&#8943;</button>
+        <div class="lib-card-menu-pop" hidden>
+          <button
+            class="lib-card-menu-item"
+            type="button"
+            data-action="toggle-hidden"
+            data-hidden="${hidden ? "1" : "0"}"
+          >${hidden ? "👁 " : "🙈 "}${esc(hideLabel)}</button>
+          <button
+            class="lib-card-menu-item lib-card-menu-danger"
+            type="button"
+            data-action="delete-title"
+          >${esc(t("library.delete", "Delete…"))}</button>
+        </div>
+      </div>
     </div>`;
   }
 
@@ -349,18 +365,83 @@
     }
   }
 
+  /* Every card carries its own popup; only one may be open at a time. */
+  function closeMenus(except) {
+    tree.querySelectorAll(".lib-card-menu-pop").forEach((pop) => {
+      if (pop === except) return;
+      pop.hidden = true;
+      const trigger = pop.parentElement && pop.parentElement.firstElementChild;
+      if (trigger) trigger.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  async function deleteTitle(button) {
+    const card = button.closest(".lib-card");
+    if (!card) return;
+    const locationNode = card.closest("[data-location]");
+    const location = locations[Number(locationNode && locationNode.dataset.location)];
+    const folder = card.dataset.folder;
+    const message = t("library.confirm_title", 'Really delete all of "{name}"?', { name: folder });
+    if (!window.confirm(message)) return;
+
+    const payload = { folder };
+    if (location && location.custom_path_id) payload.custom_path_id = location.custom_path_id;
+    if (location && location.lang_folder) payload.lang_folder = location.lang_folder;
+    button.disabled = true;
+    try {
+      await apiFetch("/api/library/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      delete metaCache[card.dataset.metaKey];
+      showToast(t("library.deleted", "Deleted"));
+      load();
+    } catch (error) {
+      button.disabled = false;
+      showToast(error.message);
+    }
+  }
+
   tree.addEventListener("click", (event) => {
     const action = event.target.closest("[data-action]");
     if (!action) return;
-    if (action.dataset.action === "retry-library") {
+    const name = action.dataset.action;
+    if (name === "retry-library") {
       event.preventDefault();
       load();
       return;
     }
-    if (action.dataset.action === "toggle-hidden") {
+    if (name === "card-menu") {
       event.preventDefault();
-      toggleHidden(action);
+      const wrap = action.closest(".lib-card-menu");
+      const pop = wrap && wrap.querySelector(".lib-card-menu-pop");
+      if (!pop) return;
+      const opening = pop.hidden;
+      closeMenus(opening ? pop : null);
+      pop.hidden = !opening;
+      action.setAttribute("aria-expanded", String(opening));
+      return;
     }
+    if (name === "toggle-hidden") {
+      event.preventDefault();
+      closeMenus();
+      toggleHidden(action);
+      return;
+    }
+    if (name === "delete-title") {
+      event.preventDefault();
+      closeMenus();
+      deleteTitle(action);
+    }
+  });
+
+  // Clicking off a card, or Escape, puts the popup away.
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".lib-card-menu")) closeMenus();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeMenus();
   });
 
   // Broken posters fall back to the placeholder without an inline handler.

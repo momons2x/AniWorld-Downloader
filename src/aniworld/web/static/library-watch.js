@@ -56,6 +56,14 @@
     return query.toString();
   }
 
+  /* esc() leaves quotes alone, which is fine in text but not inside an
+     attribute; season keys come from disk and can contain anything. */
+  function attr(value) {
+    return esc(value == null ? "" : String(value))
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   function seasonLabel(key) {
     return key === "movie"
       ? t("library.movies", "Movies")
@@ -599,7 +607,11 @@
       const label = seasonLabel(item.season);
       if (label !== group) {
         group = label;
-        html.push(`<div class="watch-season-head">${esc(label)}</div>`);
+        html.push(`
+        <div class="watch-season-head">
+          <span class="watch-season-label">${esc(label)}</span>
+          <button class="icon-btn watch-season-delete" data-delete-season="${attr(item.season)}" title="${attr(t("common.delete", "Delete"))}" aria-label="${attr(`${t("common.delete", "Delete")} ${label}`)}">&#10005;</button>
+        </div>`);
       }
       const index = flatEpisodes.indexOf(item);
       html.push(`
@@ -691,6 +703,29 @@
     }
   }
 
+  async function deleteSeason(season) {
+    const label = seasonLabel(season);
+    const message = t(
+      "library.confirm_season",
+      'Really delete every episode of "{name}"?',
+      { name: label }
+    );
+    if (!window.confirm(message)) return;
+    try {
+      await apiSend("/api/library/delete", "POST", {
+        folder,
+        season: season === "movie" ? season : Number(season),
+        ...(pathId ? { custom_path_id: pathId } : {}),
+        ...(langFolder ? { lang_folder: langFolder } : {}),
+      });
+      showToast(t("library.deleted", "Deleted"));
+      // The last season leaves nothing behind, so the folder itself is gone.
+      if (!(await loadTitle())) window.location.href = "/library";
+    } catch (error) {
+      showToast(error.message);
+    }
+  }
+
   async function loadTitle() {
     const query = locationQuery();
     const encoded = encodeURIComponent(folder);
@@ -734,6 +769,12 @@
     if (retryBtn) {
       retryBtn.disabled = true;
       if (await loadTitle()) resumeFromUrl();
+      return;
+    }
+    const seasonBtn = event.target.closest("[data-delete-season]");
+    if (seasonBtn) {
+      event.stopPropagation();
+      await deleteSeason(seasonBtn.dataset.deleteSeason);
       return;
     }
     const deleteBtn = event.target.closest("[data-delete-episode]");

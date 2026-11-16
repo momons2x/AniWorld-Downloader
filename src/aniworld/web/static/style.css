@@ -3071,11 +3071,15 @@ details.advanced summary:hover {
   color: var(--text-muted);
   cursor: pointer;
 }
-.lib-hide-btn {
+/* The card clips its children, so the popup is anchored under its trigger
+   inside the poster instead of hanging off the card edge. */
+.lib-card-menu {
   position: absolute;
   left: 6px;
   top: 6px;
   z-index: 2;
+}
+.lib-card-menu-btn {
   border: 1px solid var(--border-soft);
   background: var(--surface);
   color: var(--text);
@@ -3085,7 +3089,39 @@ details.advanced summary:hover {
   font-size: 0.85rem;
   line-height: 1.2;
 }
-.lib-hide-btn:disabled { opacity: 0.6; cursor: wait; }
+.lib-card-menu-btn:hover { border-color: var(--text-muted); }
+.lib-card-menu-pop {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  min-width: 128px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  /* Opaque: the panel sits over poster art, which --surface would let through. */
+  background: var(--surface-modal);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-toast);
+}
+.lib-card-menu-item {
+  background: none;
+  border: none;
+  border-radius: 6px;
+  text-align: left;
+  padding: 7px 9px;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lib-card-menu-item:hover { background: var(--surface-hover); }
+.lib-card-menu-item:disabled { opacity: 0.6; cursor: wait; }
+.lib-card-menu-danger { color: var(--danger-text); }
+.lib-card-menu-danger:hover { background: var(--danger-soft); }
+/* The play badge straddles the popup, so with a menu open it is just noise. */
+.lib-card:has(.lib-card-menu-pop:not([hidden])) .lib-card-play { display: none; }
 .lib-card.is-hidden { opacity: 0.75; }
 .lib-card.is-hidden .lib-card-play { display: none; }
 .lib-hidden-cover {
@@ -3384,12 +3420,18 @@ body.discover-mode #genreBar { display: none !important; }
   min-height: 0;
 }
 .watch-season-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
   padding: 8px 2px 6px;
 }
+.watch-season-label { min-width: 0; }
+.watch-season-delete { flex: none; font-size: 0.8rem; padding: 2px 6px; }
 .watch-ep {
   display: flex;
   align-items: center;
